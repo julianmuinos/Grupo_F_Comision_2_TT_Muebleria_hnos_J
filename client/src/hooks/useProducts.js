@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import apiClient from '../services/api';
 
 /**
@@ -9,13 +9,19 @@ import apiClient from '../services/api';
  * @returns {{
  *   products: Array,
  *   loading: boolean,
- *   error: string|null
+ *   error: string|null,
+ *   refetch: Function
  * }}
  */
 export const useProducts = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+
+  const refetch = useCallback(() => {
+    setReloadTrigger((prev) => prev + 1);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -30,7 +36,10 @@ export const useProducts = () => {
         });
 
         // Extraer los datos si la respuesta viene empaquetada en { success: true, data: [...] } o directa
-        const data = response.data && response.data.data !== undefined ? response.data.data : response.data;
+        const data =
+          response.data && response.data.data !== undefined
+            ? response.data.data
+            : response.data;
         setProducts(Array.isArray(data) ? data : []);
       } catch (err) {
         // Ignorar cancelaciones intencionales por desmontaje
@@ -56,10 +65,9 @@ export const useProducts = () => {
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [reloadTrigger]);
 
-  return { products, loading, error };
+  return { products, loading, error, refetch };
 };
 
 export default useProducts;
-
