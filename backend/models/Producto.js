@@ -51,6 +51,10 @@ const productoSchema = new mongoose.Schema(
       required: [true, 'La URL o ruta de la imagen es obligatoria'],
       trim: true,
     },
+    imagenUrl: {
+      type: String,
+      trim: true,
+    },
     foto: {
       type: String,
       trim: true,
@@ -84,6 +88,11 @@ const productoSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    stockLabel: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     stock: {
       type: Number,
       default: 0,
@@ -111,17 +120,38 @@ const productoSchema = new mongoose.Schema(
   }
 );
 
-// Middleware pre-guardado para sincronizar automáticamente alias en inglés / español
+// Middleware pre-guardado para sincronizar automáticamente alias en inglés / español (en creación y actualización)
 productoSchema.pre('save', function () {
-  if (this.nombre && !this.title) this.title = this.nombre;
-  if (this.categoria && !this.category) this.category = this.categoria;
-  if (this.precio !== undefined && this.price === undefined) this.price = this.precio;
-  if (this.imagen && !this.foto) this.foto = this.imagen;
-  if (this.imagen && !this.image) this.image = this.imagen;
+  if (this.isModified('nombre') || !this.title) this.title = this.nombre;
+  else if (this.isModified('title') && !this.isModified('nombre')) this.nombre = this.title;
+
+  if (this.isModified('categoria') || !this.category) this.category = this.categoria;
+  else if (this.isModified('category') && !this.isModified('categoria')) this.categoria = this.category;
+
+  if (this.isModified('precio') || this.price === undefined) this.price = this.precio;
+  else if (this.isModified('price') && !this.isModified('precio')) this.precio = this.price;
+
+  if (this.isModified('imagen') || !this.imagenUrl || !this.foto || !this.image) {
+    const img = this.imagen || this.imagenUrl || this.foto || this.image;
+    if (img) {
+      this.imagen = img;
+      this.imagenUrl = img;
+      this.foto = img;
+      this.image = img;
+    }
+  } else if (this.isModified('imagenUrl') || this.isModified('image') || this.isModified('foto')) {
+    const img = this.imagenUrl || this.image || this.foto || this.imagen;
+    if (img) {
+      this.imagen = img;
+      this.imagenUrl = img;
+      this.foto = img;
+      this.image = img;
+    }
+  }
+
   if (this.stock !== undefined) this.inStock = this.stock > 0;
 });
 
 const Producto = mongoose.model('Producto', productoSchema);
 
 module.exports = Producto;
-
