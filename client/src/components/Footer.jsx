@@ -42,6 +42,11 @@ const Footer = () => {
             <li>
               <Link to="/contacto" className="footer-nav-link">Casa Taller & Contacto</Link>
             </li>
+            <li>
+              <Link to="/admin/crear-producto" className="footer-nav-link">
+                Alta de Producto (Admin)
+              </Link>
+            </li>
           </ul>
         </div>
 

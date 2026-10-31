@@ -1,10 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getProductoId } from '../api/productos';
 
 /**
  * Componente HomeView (Inicio)
  * Basado en la maqueta de diseño oficial Hermanos Jota Heritage (inicio_hermanos_jota_2).
- * 
+ *
  * Props:
  * - products: Array de productos obtenidos de la API
  * - onNavigate: Función opcional para cambiar a otra vista ('productos', 'contacto', etc.)
@@ -33,7 +34,7 @@ const HomeView = ({ products = [], onNavigate, onSelectProduct }) => {
     if (onSelectProduct) {
       onSelectProduct(product);
     } else {
-      navigate(`/productos/${product.id}`);
+      navigate(`/productos/${getProductoId(product)}`);
     }
   };
 
@@ -127,65 +128,72 @@ const HomeView = ({ products = [], onNavigate, onSelectProduct }) => {
         </div>
 
         <div className="featured-grid">
-          {featuredProducts.map((product) => (
-            <article key={product.id} className="featured-card">
-              <div
-                className="featured-card-img-wrap"
-                onClick={() => handleSelect(product)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleSelect(product);
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                aria-label={`Ver detalles de ${product.nombre}`}
-              >
-                <img
-                  src={product.imagen}
-                  alt={product.nombre}
-                  className="featured-card-img"
-                  loading="lazy"
-                />
-                <span className="featured-badge">
-                  {product.materiales && product.materiales.includes('FSC®')
-                    ? 'Madera FSC®'
-                    : product.categoria}
-                </span>
-              </div>
-              <div className="featured-card-body">
-                <div className="featured-title-row">
-                  <h3
-                    className="featured-card-title"
-                    onClick={() => handleSelect(product)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleSelect(product);
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    title={product.nombre}
-                  >
-                    {product.nombre}
-                  </h3>
-                  <span className="featured-price">{formatPrice(product.precio)}</span>
+          {featuredProducts.map((product) => {
+            const nombre = product.nombre || product.title || product.name;
+            const imagen =
+              product.imagenUrl || product.imagen || product.image || product.foto;
+            const precio = product.precio ?? product.price ?? 0;
+
+            return (
+              <article key={getProductoId(product)} className="featured-card">
+                <div
+                  className="featured-card-img-wrap"
+                  onClick={() => handleSelect(product)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSelect(product);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Ver detalles de ${nombre}`}
+                >
+                  <img
+                    src={imagen}
+                    alt={nombre}
+                    className="featured-card-img"
+                    loading="lazy"
+                  />
+                  <span className="featured-badge">
+                    {product.materiales && product.materiales.includes('FSC®')
+                      ? 'Madera FSC®'
+                      : product.categoria || product.category}
+                  </span>
                 </div>
-                <p className="featured-desc-preview">{product.descripcion}</p>
-                <div className="featured-card-footer">
-                  <button
-                    type="button"
-                    className="btn btn-secondary-light btn-detail-action"
-                    onClick={() => handleSelect(product)}
-                  >
-                    Ver Detalle
-                  </button>
+                <div className="featured-card-body">
+                  <div className="featured-title-row">
+                    <h3
+                      className="featured-card-title"
+                      onClick={() => handleSelect(product)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleSelect(product);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      title={nombre}
+                    >
+                      {nombre}
+                    </h3>
+                    <span className="featured-price">{formatPrice(precio)}</span>
+                  </div>
+                  <p className="featured-desc-preview">{product.descripcion}</p>
+                  <div className="featured-card-footer">
+                    <button
+                      type="button"
+                      className="btn btn-secondary-light btn-detail-action"
+                      onClick={() => handleSelect(product)}
+                    >
+                      Ver Detalle
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       </section>
 

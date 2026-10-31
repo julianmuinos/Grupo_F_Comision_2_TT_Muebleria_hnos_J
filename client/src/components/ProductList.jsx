@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getProductoId } from '../api/productos';
 import useProducts from '../hooks/useProducts';
 import ProductCard from './ProductCard';
@@ -8,16 +9,19 @@ import ProductCard from './ProductCard';
  * Catálogo interactivo de Hermanos Jota con diseño oficial:
  * - Header superior con título, buscador integrado y chips de filtros rápidos
  * - Barra lateral izquierda con filtros de Categorías, Materiales con muestras de color
- * - Barra de herramientas con contador de piezas, selector de ordenamiento y alternador de vista (Grid / List)
- * - Custom Hook useProducts: estados reactivos de products, loading y error
+ * - Barra de herramientas con contador de piezas, botón de Alta de Producto (/admin/crear-producto),
+ *   selector de ordenamiento y alternador de vista (Grid / List)
+ * - Custom Hook useProducts: estados reactivos de products, loading, error y refetch
  * - Grilla visual de skeletons durante loading === true
  * - Mensaje amigable cuando error !== null
  * - Grilla de productos dinámica renderizada con .map() pasando product como prop a ProductCard
  * - Paginación interactiva
  */
 const ProductList = ({ onSelectProduct, onAddToCart }) => {
+  const navigate = useNavigate();
+
   // Consumo centralizado del custom hook useProducts
-  const { products, loading, error } = useProducts();
+  const { products, loading, error, refetch } = useProducts();
 
   const [searchInput, setSearchInput] = useState('');
   const [activeSearch, setActiveSearch] = useState('');
@@ -335,6 +339,15 @@ const ProductList = ({ onSelectProduct, onAddToCart }) => {
             </div>
 
             <div className="toolbar-controls-right">
+              {/* Botón de acceso directo al Alta de Producto (/admin/crear-producto) */}
+              <button
+                type="button"
+                className="btn btn-primary btn-sm btn-toolbar-create"
+                onClick={() => navigate('/admin/crear-producto')}
+              >
+                + Nuevo Producto
+              </button>
+
               {/* Dropdown de ordenamiento */}
               <div className="sort-control-wrapper">
                 <label htmlFor="sortSelect" className="sort-label">
@@ -427,7 +440,7 @@ const ProductList = ({ onSelectProduct, onAddToCart }) => {
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => window.location.reload()}
+                onClick={refetch}
               >
                 Reintentar
               </button>
