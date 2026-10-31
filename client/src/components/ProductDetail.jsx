@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProductoById } from '../api/productos';
+import {
+  getProductoById,
+  updateProducto,
+  deleteProducto,
+  getProductoId,
+} from '../api/productos';
 
 /**
  * Componente ProductDetail
@@ -9,15 +14,15 @@ import { getProductoById } from '../api/productos';
  * - Fotos grandes con badges de estado y categoría
  * - Especificaciones técnicas completas (medidas, materiales, acabados, etc.)
  * - Selector de cantidad y adición al carrito / cotización con feedback visual
- * 
- * - Consume GET /api/productos/:id usando el parámetro :id de la URL (useParams),
- *   controlando estados de carga (loading) y errores (404 / servidor caído)
+ * - Acciones CRUD (Integrante 5): Botones y Modales integrados para Editar (PUT /api/productos/:id)
+ *   y Eliminar (DELETE /api/productos/:id) con redirección programática vía useNavigate.
  *
  * Props:
  * - onBack: Función callback opcional para regresar al listado del catálogo
  * - onAddToCart: Función callback para añadir cantidad especificada al carrito
+ * - onProductMutated: Función callback opcional para sincronizar cambios globales (edición/borrado)
  */
-const ProductDetail = ({ onBack: propOnBack, onAddToCart }) => {
+const ProductDetail = ({ onBack: propOnBack, onAddToCart, onProductMutated }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
@@ -29,6 +34,24 @@ const ProductDetail = ({ onBack: propOnBack, onAddToCart }) => {
   const [error, setError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
 
+  // Estados para Edición (PUT /api/productos/:id) y Eliminación (DELETE /api/productos/:id)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
+  const [mutationError, setMutationError] = useState(null);
+  const [editRedirectTarget, setEditRedirectTarget] = useState('detalle'); // 'detalle' | 'catalogo'
+  const [editForm, setEditForm] = useState({
+    nombre: '',
+    descripcion: '',
+    precio: '',
+    stock: '',
+    imagenUrl: '',
+    categoria: 'almacenaje',
+    medidas: '',
+    materiales: '',
+    destacado: false,
+  });
+
   useEffect(() => {
     const controller = new AbortController();
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -38,7 +61,9 @@ const ProductDetail = ({ onBack: propOnBack, onAddToCart }) => {
     setQuantity(1);
 
     getProductoById(id, controller.signal)
-      .then(setProduct)
+      .then((data) => {
+        setProduct(data);
+      })
       .catch((err) => {
         if (err.name === 'AbortError') return;
         console.error(`Error al obtener el producto ${id}:`, err);
@@ -52,6 +77,123 @@ const ProductDetail = ({ onBack: propOnBack, onAddToCart }) => {
   }, [id, reloadKey]);
 
   const handleRetry = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  // Abrir modal de edición precargando los valores actuales del producto
+  const handleOpenEditModal = () => {
+    if (!product) return;
+    setMutationError(null);
+    setEditForm({
+      nombre: product.nombre || product.title || '',
+      descripcion: product.descripcion || '',
+      precio: product.precio ?? product.price ?? 0,
+      stock: product.stock ?? 0,
+      imagenUrl:
+        product.imagenUrl || product.imagen || product.image || product.foto || '',
+      categoria: (product.categoria || product.category || 'almacenaje').toLowerCase(),
+      medidas: product.medidas || product.specs?.medidas || '',
+      materiales: product.materiales || product.specs?.materiales || '',
+      destacado: Boolean(product.destacado),
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setEditForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  // Ejecutar PUT /api/productos/:id
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+    setMutationError(null);
+
+    if (!editForm.nombre.trim() || editForm.nombre.trim().length < 3) {
+      setMutationError('El nombre debe tener al menos 3 caracteres.');
+      return;
+    }
+    if (!editForm.descripcion.trim()) {
+      setMutationError('La descripción no puede estar vacía.');
+      return;
+    }
+    if (editForm.precio === '' || isNaN(Number(editForm.precio)) || Number(editForm.precio) < 0) {
+      setMutationError('El precio debe ser un número mayor o igual a 0.');
+      return;
+    }
+    if (
+      editForm.stock === '' ||
+      isNaN(Number(editForm.stock)) ||
+      Number(editForm.stock) < 0 ||
+      !Number.isInteger(Number(editForm.stock))
+    ) {
+      setMutationError('El stock debe ser un número entero mayor o igual a 0.');
+      return;
+    }
+    if (!editForm.imagenUrl.trim()) {
+      setMutationError('La URL de la imagen (imagenUrl) es obligatoria.');
+      return;
+    }
+
+    setIsMutating(true);
+    try {
+      const targetId = getProductoId(product) || id;
+      const payload = {
+        nombre: editForm.nombre.trim(),
+        title: editForm.nombre.trim(),
+        descripcion: editForm.descripcion.trim(),
+        precio: Number(editForm.precio),
+        price: Number(editForm.precio),
+        stock: Number(editForm.stock),
+        imagenUrl: editForm.imagenUrl.trim(),
+        imagen: editForm.imagenUrl.trim(),
+        foto: editForm.imagenUrl.trim(),
+        image: editForm.imagenUrl.trim(),
+        categoria: editForm.categoria.toLowerCase(),
+        category: editForm.categoria.toLowerCase(),
+        medidas: editForm.medidas.trim(),
+        materiales: editForm.materiales.trim(),
+        destacado: Boolean(editForm.destacado),
+      };
+
+      const updated = await updateProducto(targetId, payload);
+      setProduct(updated);
+      setIsEditModalOpen(false);
+      onProductMutated?.('update', updated);
+
+      // Navegación programática con useNavigate tras edición exitosa
+      if (editRedirectTarget === 'catalogo') {
+        navigate('/productos');
+      } else {
+        navigate(`/productos/${getProductoId(updated) || targetId}`, { replace: true });
+      }
+    } catch (err) {
+      console.error('Error al actualizar el producto:', err);
+      setMutationError(err.message || 'No se pudo actualizar el producto.');
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
+  // Ejecutar DELETE /api/productos/:id
+  const handleConfirmDelete = async () => {
+    setMutationError(null);
+    setIsMutating(true);
+    try {
+      const targetId = getProductoId(product) || id;
+      await deleteProducto(targetId);
+      setIsDeleteModalOpen(false);
+      onProductMutated?.('delete', targetId);
+
+      // Redirección programática automática al catálogo tras eliminación exitosa
+      navigate('/productos');
+    } catch (err) {
+      console.error('Error al eliminar el producto:', err);
+      setMutationError(err.message || 'No se pudo eliminar el producto.');
+      setIsMutating(false);
+    }
+  };
 
   // Manejador del botón volver con historial del navegador y fallback seguro al catálogo
   const handleBack = () => {
@@ -265,19 +407,22 @@ const ProductDetail = ({ onBack: propOnBack, onAddToCart }) => {
           <div className="detail-divider" />
 
           {/* Especificaciones Técnicas */}
-          <div className="detail-block">
-            <h3>Especificaciones Técnicas</h3>
-            <div className="detail-specs-grid">
-              {standardSpecs.map((spec, index) => (
-                <div key={index} className="spec-card">
-                  <span className="spec-label">{spec.label}</span>
-                  <span className="spec-value">{spec.value}</span>
+          {standardSpecs.length > 0 && (
+            <>
+              <div className="detail-block">
+                <h3>Especificaciones Técnicas</h3>
+                <div className="detail-specs-grid">
+                  {standardSpecs.map((spec, index) => (
+                    <div key={index} className="spec-card">
+                      <span className="spec-label">{spec.label}</span>
+                      <span className="spec-value">{spec.value}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="detail-divider" />
+              </div>
+              <div className="detail-divider" />
+            </>
+          )}
 
           {/* Acciones de Compra / Cotización */}
           <div className="detail-purchase-actions">
@@ -342,6 +487,35 @@ const ProductDetail = ({ onBack: propOnBack, onAddToCart }) => {
               </div>
             )}
 
+            {/* =========================================================
+                PANEL DE GESTIÓN CRUD (EDITAR / ELIMINAR PRODUCTO)
+                ========================================================= */}
+            <div className="detail-admin-actions-bar">
+              <div className="admin-bar-info">
+                <span className="admin-bar-badge">Gestión de Catálogo</span>
+                <span className="admin-bar-id">ID: {getProductoId(product)}</span>
+              </div>
+              <div className="admin-bar-buttons">
+                <button
+                  type="button"
+                  className="btn-admin-edit"
+                  onClick={handleOpenEditModal}
+                >
+                  ✎ Editar Producto
+                </button>
+                <button
+                  type="button"
+                  className="btn-admin-delete"
+                  onClick={() => {
+                    setMutationError(null);
+                    setIsDeleteModalOpen(true);
+                  }}
+                >
+                  🗑 Eliminar Producto
+                </button>
+              </div>
+            </div>
+
             {/* Tarjeta de Confianza y Garantía */}
             <div className="detail-trust-card">
               <div className="trust-item">
@@ -367,6 +541,280 @@ const ProductDetail = ({ onBack: propOnBack, onAddToCart }) => {
           </div>
         </div>
       </div>
+
+      {/* =========================================================
+          MODAL DE EDICIÓN DE PRODUCTO (PUT /api/productos/:id)
+          ========================================================= */}
+      {isEditModalOpen && (
+        <div
+          className="admin-modal-backdrop"
+          onClick={() => !isMutating && setIsEditModalOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-edit-title"
+        >
+          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <div>
+                <span className="section-badge">PUT /api/productos/:id</span>
+                <h2 id="modal-edit-title" className="admin-modal-title">
+                  Editar Mueble
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setIsEditModalOpen(false)}
+                disabled={isMutating}
+                aria-label="Cerrar modal de edición"
+              >
+                ✕
+              </button>
+            </div>
+
+            {mutationError && (
+              <div className="admin-alert-error" role="alert">
+                {mutationError}
+              </div>
+            )}
+
+            <form className="admin-modal-form" onSubmit={handleUpdateSubmit}>
+              <div className="form-group">
+                <label htmlFor="edit-nombre" className="form-label">
+                  Nombre del Mueble <span className="required-mark">*</span>
+                </label>
+                <input
+                  id="edit-nombre"
+                  name="nombre"
+                  type="text"
+                  className="form-input"
+                  value={editForm.nombre}
+                  onChange={handleEditFormChange}
+                  required
+                />
+              </div>
+
+              <div className="admin-form-row-2col">
+                <div className="form-group">
+                  <label htmlFor="edit-precio" className="form-label">
+                    Precio ($ ARS) <span className="required-mark">*</span>
+                  </label>
+                  <input
+                    id="edit-precio"
+                    name="precio"
+                    type="number"
+                    min="0"
+                    className="form-input"
+                    value={editForm.precio}
+                    onChange={handleEditFormChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="edit-stock" className="form-label">
+                    Stock Disponible <span className="required-mark">*</span>
+                  </label>
+                  <input
+                    id="edit-stock"
+                    name="stock"
+                    type="number"
+                    min="0"
+                    step="1"
+                    className="form-input"
+                    value={editForm.stock}
+                    onChange={handleEditFormChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="admin-form-row-2col">
+                <div className="form-group">
+                  <label htmlFor="edit-categoria" className="form-label">
+                    Categoría
+                  </label>
+                  <select
+                    id="edit-categoria"
+                    name="categoria"
+                    className="form-input form-select"
+                    value={editForm.categoria}
+                    onChange={handleEditFormChange}
+                  >
+                    <option value="almacenaje">Almacenaje</option>
+                    <option value="asientos">Asientos</option>
+                    <option value="mesas">Mesas</option>
+                    <option value="accesorios">Accesorios</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="edit-imagenUrl" className="form-label">
+                    URL de Imagen (<code>imagenUrl</code>) <span className="required-mark">*</span>
+                  </label>
+                  <input
+                    id="edit-imagenUrl"
+                    name="imagenUrl"
+                    type="text"
+                    className="form-input"
+                    value={editForm.imagenUrl}
+                    onChange={handleEditFormChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="admin-form-row-2col">
+                <div className="form-group">
+                  <label htmlFor="edit-medidas" className="form-label">
+                    Medidas
+                  </label>
+                  <input
+                    id="edit-medidas"
+                    name="medidas"
+                    type="text"
+                    className="form-input"
+                    value={editForm.medidas}
+                    onChange={handleEditFormChange}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="edit-materiales" className="form-label">
+                    Materiales
+                  </label>
+                  <input
+                    id="edit-materiales"
+                    name="materiales"
+                    type="text"
+                    className="form-input"
+                    value={editForm.materiales}
+                    onChange={handleEditFormChange}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="edit-descripcion" className="form-label">
+                  Descripción <span className="required-mark">*</span>
+                </label>
+                <textarea
+                  id="edit-descripcion"
+                  name="descripcion"
+                  rows="3"
+                  className="form-textarea"
+                  value={editForm.descripcion}
+                  onChange={handleEditFormChange}
+                  required
+                />
+              </div>
+
+              <div className="admin-options-box">
+                <label className="sidebar-checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="destacado"
+                    checked={editForm.destacado}
+                    onChange={handleEditFormChange}
+                    className="custom-checkbox"
+                  />
+                  <span className="checkbox-text">Pieza Destacada</span>
+                </label>
+
+                <div className="admin-redirect-selector">
+                  <span className="form-label">Al guardar cambios:</span>
+                  <div className="redirect-radios">
+                    <label className="radio-label">
+                      <input
+                        type="radio"
+                        name="editRedirectTarget"
+                        checked={editRedirectTarget === 'detalle'}
+                        onChange={() => setEditRedirectTarget('detalle')}
+                      />
+                      <span>Permanecer en Detalle</span>
+                    </label>
+                    <label className="radio-label">
+                      <input
+                        type="radio"
+                        name="editRedirectTarget"
+                        checked={editRedirectTarget === 'catalogo'}
+                        onChange={() => setEditRedirectTarget('catalogo')}
+                      />
+                      <span>Redirigir al Catálogo</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="admin-modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary-light"
+                  onClick={() => setIsEditModalOpen(false)}
+                  disabled={isMutating}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={isMutating}>
+                  {isMutating ? 'Guardando cambios...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          MODAL DE CONFIRMACIÓN DE BORRADO (DELETE /api/productos/:id)
+          ========================================================= */}
+      {isDeleteModalOpen && (
+        <div
+          className="admin-modal-backdrop"
+          onClick={() => !isMutating && setIsDeleteModalOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-delete-title"
+        >
+          <div
+            className="admin-modal-card admin-modal-delete"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="delete-modal-icon">⚠️</div>
+            <h2 id="modal-delete-title" className="admin-modal-title">
+              ¿Eliminar &ldquo;{nombre}&rdquo;?
+            </h2>
+            <p className="delete-modal-desc">
+              Esta acción ejecutará <code>DELETE /api/productos/{getProductoId(product)}</code> y
+              removerá permanentemente la pieza de la base de datos en MongoDB Atlas.
+            </p>
+
+            {mutationError && (
+              <div className="admin-alert-error" role="alert">
+                {mutationError}
+              </div>
+            )}
+
+            <div className="admin-modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary-light"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isMutating}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-confirm-delete"
+                onClick={handleConfirmDelete}
+                disabled={isMutating}
+              >
+                {isMutating ? 'Eliminando...' : 'Sí, Eliminar Definitivamente'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
