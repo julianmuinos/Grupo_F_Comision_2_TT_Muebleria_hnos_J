@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getProductoId } from '../api/productos';
 
 /**
  * Componente CartModal
@@ -20,7 +21,10 @@ const CartModal = ({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onCl
 
   // Cálculo del subtotal y total con umbral realista de envío bonificado
   const UMBRAL_ENVIO_GRATIS = 1500000; // $1.500.000 ARS
-  const subtotal = cart.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
+  const subtotal = cart.reduce(
+    (acc, item) => acc + (item.precio ?? item.price ?? 0) * item.cantidad,
+    0
+  );
   const envioGratis = subtotal >= UMBRAL_ENVIO_GRATIS;
   const costoEnvio = subtotal > 0 && !envioGratis ? 8500 : 0;
   const total = subtotal + costoEnvio;
@@ -29,7 +33,7 @@ const CartModal = ({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onCl
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
       currency: 'ARS',
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(valor);
   };
 
@@ -44,7 +48,7 @@ const CartModal = ({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onCl
 
   const handleExploreCatalog = () => {
     onClose();
-    navigate('/catalogo');
+    navigate('/productos');
   };
 
   return (
@@ -91,7 +95,9 @@ const CartModal = ({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onCl
               <path d="m9 12 2 2 4-4" />
             </svg>
             <h3>¡Pedido confirmado con éxito!</h3>
-            <p>Gracias por confiar en <strong>Mueblería Hermanos Jota</strong>. Te hemos enviado un correo con el detalle de entrega y factura.</p>
+            <p>
+              Gracias por confiar en <strong>Mueblería Hermanos Jota</strong>. Te hemos enviado un correo con el detalle de entrega y factura.
+            </p>
             <p className="redirect-note">Cerrando el carrito...</p>
           </div>
         ) : cart.length === 0 ? (
@@ -119,61 +125,69 @@ const CartModal = ({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onCl
         ) : (
           <>
             <div className="cart-items-list custom-scroll">
-              {cart.map((item) => (
-                <div key={item.id} className="cart-item">
-                  <img src={item.imagen} alt={item.nombre} className="cart-item-image" />
-                  <div className="cart-item-details">
-                    <h4 className="cart-item-title">{item.nombre}</h4>
-                    <p className="cart-item-price">{formatoMoneda(item.precio)} c/u</p>
-                    <div className="cart-item-controls">
-                      <button
-                        type="button"
-                        onClick={() => onUpdateQuantity(item.id, -1)}
-                        className="qty-btn-mini"
-                        title="Restar uno"
-                      >
-                        -
-                      </button>
-                      <span className="cart-item-qty">{item.cantidad}</span>
-                      <button
-                        type="button"
-                        onClick={() => onUpdateQuantity(item.id, 1)}
-                        className="qty-btn-mini"
-                        disabled={item.cantidad >= item.stock}
-                        title="Sumar uno"
-                      >
-                        +
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onRemoveItem(item.id)}
-                        className="remove-btn"
-                        title="Eliminar producto"
-                        aria-label={`Eliminar ${item.nombre}`}
-                      >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
+              {cart.map((item) => {
+                const itemId = getProductoId(item);
+                const itemNombre = item.nombre || item.title || item.name;
+                const itemImagen =
+                  item.imagenUrl || item.imagen || item.image || item.foto;
+                const itemPrecio = item.precio ?? item.price ?? 0;
+
+                return (
+                  <div key={itemId} className="cart-item">
+                    <img src={itemImagen} alt={itemNombre} className="cart-item-image" />
+                    <div className="cart-item-details">
+                      <h4 className="cart-item-title">{itemNombre}</h4>
+                      <p className="cart-item-price">{formatoMoneda(itemPrecio)} c/u</p>
+                      <div className="cart-item-controls">
+                        <button
+                          type="button"
+                          onClick={() => onUpdateQuantity(itemId, -1)}
+                          className="qty-btn-mini"
+                          title="Restar uno"
                         >
-                          <path d="M3 6h18" />
-                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                        </svg>
-                      </button>
+                          -
+                        </button>
+                        <span className="cart-item-qty">{item.cantidad}</span>
+                        <button
+                          type="button"
+                          onClick={() => onUpdateQuantity(itemId, 1)}
+                          className="qty-btn-mini"
+                          disabled={item.cantidad >= item.stock}
+                          title="Sumar uno"
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onRemoveItem(itemId)}
+                          className="remove-btn"
+                          title="Eliminar producto"
+                          aria-label={`Eliminar ${itemNombre}`}
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="cart-item-total">
+                      {formatoMoneda(itemPrecio * item.cantidad)}
                     </div>
                   </div>
-                  <div className="cart-item-total">
-                    {formatoMoneda(item.precio * item.cantidad)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="cart-footer">
@@ -187,7 +201,8 @@ const CartModal = ({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onCl
               </div>
               {!envioGratis && (
                 <p className="free-shipping-hint">
-                  Agrega {formatoMoneda(UMBRAL_ENVIO_GRATIS - subtotal)} más para obtener <strong>Envío Gratis</strong>
+                  Agrega {formatoMoneda(UMBRAL_ENVIO_GRATIS - subtotal)} más para obtener{' '}
+                  <strong>Envío Gratis</strong>
                 </p>
               )}
               <div className="cart-summary-line total-line">
