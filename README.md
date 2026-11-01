@@ -1,7 +1,7 @@
 # E-commerce Mueblería Hermanos Jota 🪵
 ## Trabajo Práctico Integrador — Sprints 3, 4, 5 y 6 | ITBA (Comisión 2 TT · Grupo F)
 
-Repositorio oficial del equipo para el desarrollo de la plataforma e-commerce y cotizador interactivo de **Mueblería Hermanos Jota**, basada en una arquitectura Cliente-Servidor desacoplada con **Node.js + Express** y **MongoDB Atlas (Mongoose)** en el backend, y **React 19 + Vite + Axios** en el frontend.
+Repositorio oficial del equipo para el desarrollo de la plataforma e-commerce y cotizador interactivo de **Mueblería Hermanos Jota**, basada en una arquitectura Cliente-Servidor desacoplada con **Node.js + Express** y **MongoDB Atlas (Mongoose)** en el backend, y **React 19 + Vite + Axios** en el frontend, lista para despliegue en la nube en **Render** y **Vercel**.
 
 ---
 
@@ -35,10 +35,11 @@ La solución adopta una **arquitectura desacoplada en capas (Client-Server con B
 
 ```text
 ┌────────────────────────────────────────────────────────┐
-│                   CLIENTE (Frontend)                   │
+│             CLIENTE (Frontend en Vercel)               │
 │      React 19 + Vite + Tailwind CSS + Axios            │
-│      Puerto por defecto: http://localhost:5173         │
+│      Despliegue: https://<tu-app>.vercel.app           │
 ├────────────────────────────────────────────────────────┤
+│  • Enrutamiento SPA con soporte vercel.json (rewrites) │
 │  • Custom Hook useProducts con AbortController         │
 │  • Instancia centralizada Axios apiClient (api.js)     │
 │  • Grilla con Skeleton Loading Shimmer durante carga   │
@@ -49,9 +50,9 @@ La solución adopta una **arquitectura desacoplada en capas (Client-Server con B
                     JSON Payloads (CORS dinámico por CLIENT_URL)
                             │
 ┌───────────────────────────▼────────────────────────────┐
-│                   SERVIDOR (Backend API)               │
+│             SERVIDOR (Backend API en Render)           │
 │          Node.js + Express 4 + Dotenv (API REST)       │
-│          Puerto por defecto: http://localhost:5000     │
+│          Despliegue: https://<tu-api>.onrender.com     │
 ├────────────────────────────────────────────────────────┤
 │  • Controladores desacoplados (CRUD completo - MVC)    │
 │  • Router /api/productos y alias /api/products         │
@@ -82,7 +83,7 @@ La solución adopta una **arquitectura desacoplada en capas (Client-Server con B
 * **Script de Sembrado Masivo (Seed)**: Script ejecutable `seed.js` idempotente que vacía la colección previa y carga los 11 muebles del catálogo oficial en Atlas con `npm run seed`.
 
 ### Características del Frontend
-* **Single Page Application (SPA)**: Desarrollada con React 19 y Vite para una navegación fluida e instantánea.
+* **Single Page Application (SPA)**: Desarrollada con React 19 y Vite para una navegación fluida e instantánea, con configuración de reescritura en `client/vercel.json` para soportar navegación directa y recargas de página sin errores 404 en producción.
 * **Cliente HTTP con Axios (`apiClient`)**: Instancia centralizada en `src/services/api.js` configurada con `baseURL` dinámica desde `VITE_API_URL`, `timeout: 10000ms` y headers JSON por defecto.
 * **Custom Hook `useProducts`**: Encapsula en `src/hooks/useProducts.js` la lógica asíncrona de obtención del catálogo, retornando `{ products, loading, error }` y protegiendo el ciclo de vida con `AbortController`.
 * **Grilla Skeleton de Carga (Shimmer)**: Mientras `loading === true`, `ProductList.jsx` renderiza 6 tarjetas *skeleton* con animación de pulso que simulan la estructura de imagen, título, precio y materiales.
@@ -147,6 +148,7 @@ Grupo_F_Comision_2_TT_Sprint_3-4_Muebleria_hnos_J/
 │   │   ├── index.css             # Reseteo base y configuración de Tailwind CSS
 │   │   └── main.jsx              # Renderizado principal de la aplicación React 19
 │   ├── index.html                # Plantilla HTML5 con metadatos y fuentes
+│   ├── vercel.json               # Configuración de reescritura para rutas SPA en Vercel
 │   ├── .env.example              # Plantilla de variable VITE_API_URL
 │   ├── vite.config.js            # Configuración del bundler Vite
 │   ├── eslint.config.js          # Reglas de linting y buenas prácticas de código
@@ -279,7 +281,7 @@ Grupo_F_Comision_2_TT_Sprint_3-4_Muebleria_hnos_J/
 
 ---
 
-## 🛠️ Instalación y Ejecución
+## 🛠️ Instalación y Ejecución Local
 
 ### Prerrequisitos
 * **Node.js**: v18.0.0 o superior (recomendado v20+)
@@ -363,6 +365,7 @@ npm run dev
 9. **Custom Hook Reactivo (`useProducts`)**: Desacoplamiento de la lógica de red de los componentes de vista, implementando ciclo de vida seguro con `AbortController`.
 10. **Feedback Visual Inmediato (Skeleton Loader)**: Reemplazo de pantallas de bloqueo estáticas por esqueletos con efecto shimmer en la grilla del catálogo.
 11. **Eliminación de Datos Hardcodeados**: Adaptación de `ProductCard` para renderizar propiedades dinámicas reales provenientes de la base de datos.
+12. **Configuración de Despliegue en la Nube (Vercel & Render)**: Incorporación de `client/vercel.json` con reglas de reescritura SPA y documentación del flujo de producción.
 
 ---
 
