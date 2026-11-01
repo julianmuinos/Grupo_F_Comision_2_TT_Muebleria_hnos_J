@@ -1,15 +1,16 @@
 const mongoose = require('mongoose');
 const Producto = require('../models/Producto');
+const Categoria = require('../models/Categoria');
 
 /**
  * Controlador de Productos - Mueblería Hermanos Jota (Sprint 5 y 6)
  *
- * Sprint 5: Operaciones de lectura contra MongoDB Atlas mediante Mongoose (Integrante 1).
+ * Sprint 5: Operaciones de lectura contra MongoDB Atlas mediante Mongoose y relaciones con Categoria (ref).
  * Sprint 6: Mutaciones (POST, PUT, DELETE) y validaciones contra MongoDB Atlas (Integrante 2 - Emanuel Ramirez).
  */
 
 /**
- * @desc    Obtener el listado completo de productos del catálogo desde MongoDB (con soporte de filtros)
+ * @desc    Obtener el listado completo de productos del catálogo desde MongoDB (con soporte de filtros y populate)
  * @route   GET /api/productos
  * @access  Público
  */
@@ -28,7 +29,9 @@ const obtenerProductos = async (req, res, next) => {
       filtro.destacado = true;
     }
 
-    const productos = await Producto.find(filtro).sort({ createdAt: -1 });
+    const productos = await Producto.find(filtro)
+      .populate('categoriaRef')
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -48,7 +51,7 @@ const obtenerProductos = async (req, res, next) => {
 };
 
 /**
- * @desc    Obtener un producto individual por su _id de MongoDB
+ * @desc    Obtener un producto individual por su _id de MongoDB (con populate de categoría)
  * @route   GET /api/productos/:id
  * @access  Público
  */
@@ -65,8 +68,8 @@ const obtenerProductoPorId = async (req, res, next) => {
       });
     }
 
-    // Búsqueda del producto por _id en MongoDB
-    const producto = await Producto.findById(id);
+    // Búsqueda del producto por _id en MongoDB con población del modelo referenciado
+    const producto = await Producto.findById(id).populate('categoriaRef');
 
     // Validación 404: si el producto no existe en la colección
     if (!producto) {
@@ -100,7 +103,7 @@ const obtenerProductoPorId = async (req, res, next) => {
  */
 
 /**
- * @desc    Dar de alta un nuevo producto en la base de datos
+ * @desc    Dar de alta un nuevo producto en la base de datos con vinculación relacional
  * @route   POST /api/productos
  * @access  Público / Administrativo
  * @status  201 Created
@@ -112,6 +115,7 @@ const crearProducto = async (req, res, next) => {
       title,
       categoria,
       category,
+      categoriaRef,
       precio,
       price,
       descripcion,
@@ -133,13 +137,24 @@ const crearProducto = async (req, res, next) => {
     } = req.body;
 
     const imagenResuelta = imagen || imagenUrl || foto || image;
+    const catNombre = (categoria || category || 'almacenaje').toLowerCase();
+
+    // Resolver automáticamente la referencia a Categoria si no se pasó explícitamente
+    let resolvedCategoriaRef = categoriaRef || null;
+    if (!resolvedCategoriaRef && catNombre) {
+      const catDoc = await Categoria.findOne({ nombre: catNombre });
+      if (catDoc) {
+        resolvedCategoriaRef = catDoc._id;
+      }
+    }
 
     // Construcción del nuevo documento siguiendo el modelo Mongoose
     const nuevoProducto = new Producto({
       nombre: nombre || title,
       title: title || nombre,
-      categoria: (categoria || category || 'almacenaje').toLowerCase(),
-      category: (category || categoria || 'almacenaje').toLowerCase(),
+      categoria: catNombre,
+      category: catNombre,
+      categoriaRef: resolvedCategoriaRef,
       precio: precio !== undefined ? precio : price,
       price: price !== undefined ? price : precio,
       descripcion,
@@ -162,6 +177,7 @@ const crearProducto = async (req, res, next) => {
     });
 
     const productoGuardado = await nuevoProducto.save();
+    await productoGuardado.populate('categoriaRef');
 
     return res.status(201).json({
       success: true,
@@ -207,6 +223,7 @@ const actualizarProducto = async (req, res, next) => {
       'title',
       'categoria',
       'category',
+      'categoriaRef',
       'precio',
       'price',
       'descripcion',
@@ -234,8 +251,18 @@ const actualizarProducto = async (req, res, next) => {
       }
     });
 
+    // Si se actualizó la categoría como string y no se pasó categoriaRef, sincronizarla
+    if ((req.body.categoria || req.body.category) && req.body.categoriaRef === undefined) {
+      const nuevoCatNombre = (req.body.categoria || req.body.category).toLowerCase().trim();
+      const catDoc = await Categoria.findOne({ nombre: nuevoCatNombre });
+      if (catDoc) {
+        producto.categoriaRef = catDoc._id;
+      }
+    }
+
     // Guardar para ejecutar validadores y el middleware pre('save') del schema
     const productoActualizado = await producto.save();
+    await productoActualizado.populate('categoriaRef');
 
     return res.status(200).json({
       success: true,
