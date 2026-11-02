@@ -199,6 +199,9 @@ html {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 .main-content {
@@ -207,6 +210,7 @@ html {
   margin: 0 auto;
   width: 100%;
   padding: 2.5rem 1.5rem;
+  box-sizing: border-box;
 }
 
 .main-content-home {
@@ -986,6 +990,7 @@ html {
   gap: 0.6rem;
   font-size: 0.85rem;
   color: var(--text-muted);
+  flex-wrap: wrap;
 }
 
 .back-link-btn {
@@ -1110,6 +1115,8 @@ html {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .price-tagline {
@@ -2686,6 +2693,9 @@ html {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .contact-detail-label {
@@ -3335,6 +3345,21 @@ html {
   }
 }
 
+@media (max-width: 380px) {
+  .brand-name {
+    font-size: 1.05rem;
+    letter-spacing: 0.04em;
+  }
+
+  .brand-logo-img {
+    height: 30px;
+  }
+
+  .navbar-content {
+    padding: 0.65rem 0.75rem;
+  }
+}
+
 /* =========================================================
    REDISEÑO OFICIAL CATÁLOGO HERMANOS JOTA (DOS COLUMNAS, SIDEBAR Y TOOLBAR)
    ========================================================= */
@@ -3358,7 +3383,7 @@ html {
 
 .catalog-hero-title-area {
   flex: 1;
-  min-width: 280px;
+  min-width: 0;
 }
 
 .catalog-hero-title {
@@ -3385,7 +3410,7 @@ html {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  min-width: 320px;
+  min-width: 0;
   max-width: 480px;
   width: 100%;
 }
@@ -3428,6 +3453,7 @@ html {
   font-size: 0.92rem;
   color: #1a130d;
   width: 100%;
+  min-width: 0;
   flex: 1;
   font-family: inherit;
 }
@@ -3529,6 +3555,7 @@ html {
 .sidebar-filter-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.6rem;
   font-size: 0.82rem;
   font-weight: 700;
@@ -3538,6 +3565,30 @@ html {
   padding-bottom: 0.85rem;
   border-bottom: 1.5px solid #ebdcd0;
   margin-bottom: 1.5rem;
+}
+
+.sidebar-filter-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.btn-sidebar-clear {
+  background: none;
+  border: none;
+  color: var(--primary, #823b18);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0;
+  transition: opacity 0.2s ease;
+}
+
+.btn-sidebar-clear:hover {
+  text-decoration: underline;
+  opacity: 0.85;
 }
 
 .sidebar-group {
@@ -3583,6 +3634,7 @@ html {
   place-content: center;
   transition: all 0.2s ease;
   margin: 0;
+  flex-shrink: 0;
 }
 
 .custom-checkbox:checked {
@@ -3630,6 +3682,7 @@ html {
   align-items: center;
   justify-content: center;
   transition: transform 0.15s ease, outline 0.15s ease;
+  flex-shrink: 0;
 }
 
 .material-swatch-box.checked {
@@ -3896,6 +3949,8 @@ html {
   align-items: center;
   margin-top: auto;
   padding-top: 0.85rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .product-price {
@@ -4063,6 +4118,7 @@ html {
   align-items: center;
   gap: 0.5rem;
   margin-top: 3rem;
+  flex-wrap: wrap;
 }
 
 .pagination-arrow-btn,
@@ -4133,46 +4189,210 @@ html {
 @media (max-width: 1024px) {
   .catalog-grid-3cols {
     grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
   }
 }
 
 @media (max-width: 900px) {
   .catalog-content-layout {
     grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+
+  .catalog-hero-banner {
+    padding: 1.75rem 1.5rem;
+    margin-bottom: 2rem;
   }
 
   .catalog-hero-inner {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    gap: 1.5rem;
   }
 
+  .catalog-hero-title-area,
   .catalog-hero-search-area {
+    min-width: 0;
     max-width: 100%;
+    width: 100%;
   }
 
   .catalog-sidebar {
     background: #faf6f0;
-    padding: 1.5rem;
+    padding: 1.25rem 1.25rem 0.75rem;
     border-radius: 12px;
     border: 1px solid #ebdcd0;
+    margin-bottom: 0.5rem;
+  }
+
+  .sidebar-filter-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.65rem;
   }
 }
 
-@media (max-width: 600px) {
-  .catalog-grid-3cols {
-    grid-template-columns: 1fr;
+@media (min-width: 560px) and (max-width: 900px) {
+  .catalog-sidebar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 2rem;
+  }
+
+  .sidebar-filter-header {
+    grid-column: 1 / -1;
+  }
+
+  .sidebar-group {
+    margin-bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .catalog-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+  }
+
+  .toolbar-counter {
+    font-size: 0.88rem;
+  }
+
+  .toolbar-controls-right {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .btn-toolbar-create {
+    order: 1;
+    flex: 1 1 auto;
+    min-width: 140px;
+    justify-content: center;
+    padding: 0.55rem 0.95rem;
+  }
+
+  .sort-control-wrapper {
+    order: 2;
+    flex: 1 1 auto;
+    min-width: 170px;
+  }
+
+  .sort-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .view-mode-toggles {
+    order: 3;
+    flex-shrink: 0;
+    margin-left: auto;
   }
 
   .product-card-list {
     grid-template-columns: 1fr;
   }
 
-  .catalog-hero-banner {
-    padding: 1.5rem 1.25rem;
+  .product-list-image-container {
+    height: 200px;
+    min-height: 200px;
   }
 
+  .product-list-info {
+    padding: 1.15rem 1.25rem;
+  }
+
+  .product-list-title-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 680px) {
+  .catalog-grid-3cols {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .catalog-hero-banner {
+    padding: 1.35rem 1rem;
+    margin-bottom: 1.75rem;
+    border-radius: 12px;
+  }
+
+  .catalog-hero-title,
   .catalog-main-title {
-    font-size: 1.85rem;
+    font-size: 2rem;
+    line-height: 1.2;
+  }
+
+  .catalog-hero-subtitle {
+    font-size: 0.88rem;
+  }
+
+  .search-bar-unified {
+    height: 44px;
+    padding: 4px 4px 4px 12px;
+  }
+
+  .catalog-search-input {
+    font-size: 0.85rem;
+    min-width: 0;
+  }
+
+  .btn-search-solid {
+    height: 36px;
+    padding: 0 1rem;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .catalog-hero-title,
+  .catalog-main-title {
+    font-size: 1.75rem;
+  }
+
+  .btn-toolbar-create {
+    width: 100%;
+    flex: 1 1 100%;
+    text-align: center;
+  }
+
+  .sort-control-wrapper {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sort-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+  }
+
+  .sort-select {
+    font-size: 0.8rem;
+    padding: 0.4rem 1.5rem 0.4rem 0.5rem;
+  }
+
+  .catalog-pagination-bar {
+    gap: 0.35rem;
+    margin-top: 2rem;
+  }
+
+  .pagination-arrow-btn,
+  .pagination-num-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 0.82rem;
+  }
+
+  .product-card-bottom-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
   }
 }
 
@@ -4776,5 +4996,90 @@ html {
 
   .admin-card-wrapper {
     padding: 1.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-form-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .admin-form-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .admin-card-wrapper {
+    padding: 1.25rem 1rem;
+  }
+
+  .admin-modal-backdrop {
+    padding: 0.75rem;
+  }
+
+  .admin-modal-card {
+    padding: 1.25rem 1rem;
+    max-height: 95vh;
+  }
+
+  .admin-modal-footer {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+
+  .admin-modal-footer .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .detail-admin-actions-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .admin-bar-buttons {
+    width: 100%;
+    display: flex;
+  }
+
+  .btn-admin-edit,
+  .btn-admin-delete {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .detail-specs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .contact-showroom-card {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .home-hero-title {
+    font-size: 2rem;
+  }
+
+  .showroom-title {
+    font-size: 1.75rem;
+  }
+
+  .cart-item {
+    gap: 0.75rem;
+  }
+
+  .cart-item-image {
+    width: 60px;
+    height: 60px;
+  }
+
+  .cart-item-title {
+    font-size: 0.92rem;
   }
 }

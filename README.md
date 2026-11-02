@@ -67,13 +67,14 @@ La solución adopta una **arquitectura desacoplada en capas (Client-Server con B
 │          MongoDB Atlas (Cluster M0 / AWS)              │
 │          Base de Datos: muebleria_hermanos_jota        │
 ├────────────────────────────────────────────────────────┤
-│  • Colección: productos (11 piezas oficiales)          │
+│  • Colecciones: productos (11) y categorias (4)        │
 │  • Clave primaria nativa: _id (ObjectId)               │
 │  • Índices optimizados por categoría y destacados      │
 └────────────────────────────────────────────────────────┘
 ```
 
 ### Características del Backend
+* **Modelado Relacional Mongoose (ref y populate)**: Modelo Categoria (models/Categoria.js) relacionado con Producto (models/Producto.js) a través de categoriaRef (ef: \'Categoria\'), con población automática en lecturas y retrocompatibilidad total con el cliente.
 * **Conexión a MongoDB Atlas con Mongoose**: Módulo desacoplado en `config/db.js` con manejo de excepciones `try/catch`, validación estricta de `MONGO_URI` y consola decorada con host y base de datos.
 * **Gestión de Entorno con Dotenv**: Centralización de variables críticas (`PORT`, `MONGO_URI`, `CLIENT_URL`) mediante `.env`, con plantillas seguras `.env.example` versionadas en el repositorio.
 * **CORS Dinámico**: Configurado para restringir accesos exclusivamente al origen `CLIENT_URL` (o permitir todos en desarrollo si no está definido).

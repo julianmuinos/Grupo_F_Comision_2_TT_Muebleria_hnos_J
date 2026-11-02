@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 /**
  * Esquema de Producto - Mueblería Hermanos Jota (Sprint 5 y 6)
  * Modela los muebles del catálogo con soporte para especificaciones técnicas,
- * control de stock, categorías, variantes visuales (swatches) y compatibilidad con el frontend.
+ * control de stock, categorías, variantes visuales (swatches), relaciones (ref) y compatibilidad con el frontend.
  */
 const productoSchema = new mongoose.Schema(
   {
@@ -27,6 +27,12 @@ const productoSchema = new mongoose.Schema(
       type: String,
       trim: true,
       lowercase: true,
+    },
+    categoriaRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Categoria',
+      default: null,
+      index: true,
     },
     precio: {
       type: Number,
