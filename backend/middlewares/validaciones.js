@@ -37,6 +37,7 @@ const validarCrearProducto = (req, res, next) => {
     price,
     descripcion,
     imagen,
+    imagenUrl,
     foto,
     image,
     stock,
@@ -45,11 +46,11 @@ const validarCrearProducto = (req, res, next) => {
     swatches,
   } = req.body;
 
-  // Normalización de campos clave (soporte en español e inglés)
+  // Normalización de campos clave (soporte en español e inglés y categoría por defecto para formularios de alta)
   const nombreValido = (nombre || title || '').trim();
-  const categoriaValida = (categoria || category || '').trim();
+  const categoriaValida = (categoria || category || 'almacenaje').trim();
   const descripcionValida = (descripcion || '').trim();
-  const imagenValida = (imagen || foto || image || '').trim();
+  const imagenValida = (imagen || imagenUrl || foto || image || '').trim();
   const precioValor = precio !== undefined ? precio : price;
 
   // Validación de nombre
@@ -75,9 +76,9 @@ const validarCrearProducto = (req, res, next) => {
     );
   }
 
-  // Validación de imagen
+  // Validación de imagen (soporta imagen, imagenUrl, foto o image)
   if (!imagenValida) {
-    errores.push('El campo "imagen" (o "foto" / "image") es obligatorio.');
+    errores.push('El campo "imagenUrl" (o "imagen" / "foto" / "image") es obligatorio.');
   }
 
   // Validación de precio
@@ -90,7 +91,7 @@ const validarCrearProducto = (req, res, next) => {
   }
 
   // Validación de stock opcional
-  if (stock !== undefined && stock !== null) {
+  if (stock !== undefined && stock !== null && stock !== '') {
     if (
       isNaN(Number(stock)) ||
       Number(stock) < 0 ||
@@ -132,8 +133,9 @@ const validarCrearProducto = (req, res, next) => {
   req.body.categoria = categoriaValida.toLowerCase();
   req.body.descripcion = descripcionValida;
   req.body.imagen = imagenValida;
+  req.body.imagenUrl = imagenValida;
   req.body.precio = Number(precioValor);
-  if (stock !== undefined) req.body.stock = Number(stock);
+  if (stock !== undefined && stock !== '') req.body.stock = Number(stock);
 
   next();
 };
@@ -173,6 +175,7 @@ const validarActualizarProducto = (req, res, next) => {
     price,
     descripcion,
     imagen,
+    imagenUrl,
     foto,
     image,
     stock,
@@ -218,12 +221,21 @@ const validarActualizarProducto = (req, res, next) => {
   }
 
   const imagenVal =
-    imagen !== undefined ? imagen : foto !== undefined ? foto : image;
+    imagen !== undefined
+      ? imagen
+      : imagenUrl !== undefined
+      ? imagenUrl
+      : foto !== undefined
+      ? foto
+      : image;
   if (
     imagenVal !== undefined &&
     (typeof imagenVal !== 'string' || imagenVal.trim().length === 0)
   ) {
     errores.push('El campo de imagen no puede estar vacío.');
+  } else if (imagenVal !== undefined) {
+    req.body.imagen = imagenVal.trim();
+    req.body.imagenUrl = imagenVal.trim();
   }
 
   const precioVal = precio !== undefined ? precio : price;

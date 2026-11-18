@@ -26,10 +26,22 @@ const Navbar = ({ cartCount, currentView: propCurrentView, onNavigate, onOpenCar
 
   // Determinar vista activa según la ruta actual ('Catálogo' activo también en /productos/:id)
   const isHome = location.pathname === '/';
-  const isCatalog = location.pathname === '/catalogo' || location.pathname.startsWith('/producto');
+  const isCatalog =
+    location.pathname === '/catalogo' || location.pathname.startsWith('/producto');
   const isContact = location.pathname === '/contacto';
+  const isAdmin = location.pathname.startsWith('/admin');
 
-  const activeView = propCurrentView || (isHome ? 'inicio' : isCatalog ? 'catalogo' : isContact ? 'contacto' : '');
+  const activeView =
+    propCurrentView ||
+    (isHome
+      ? 'inicio'
+      : isCatalog
+      ? 'catalogo'
+      : isContact
+      ? 'contacto'
+      : isAdmin
+      ? 'admin'
+      : '');
 
   return (
     <header className="navbar-container">
@@ -99,6 +111,13 @@ const Navbar = ({ cartCount, currentView: propCurrentView, onNavigate, onOpenCar
             onClick={() => handleNavigate('/contacto')}
           >
             Contacto
+          </button>
+          <button
+            type="button"
+            className={`nav-button ${isAdmin ? 'active' : ''}`}
+            onClick={() => handleNavigate('/admin/crear-producto')}
+          >
+            + Crear Producto
           </button>
         </nav>
 

@@ -4,11 +4,17 @@ import Navbar from './components/Navbar';
 import CartModal from './components/CartModal';
 import ProductList from './components/ProductList';
 import ProductDetail from './components/ProductDetail';
+import ProductForm from './components/ProductForm';
 import HomeView from './components/HomeView';
 import ContactView from './components/ContactView';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
-import { getProductos, API_BASE, PRODUCTOS_URL as API_URL } from './api/productos';
+import {
+  getProductos,
+  getProductoId,
+  API_BASE,
+  PRODUCTOS_URL as API_URL,
+} from './api/productos';
 import './App.css';
 
 // Redirección de la ruta legada /producto/:id a /productos/:id
@@ -21,7 +27,7 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 1. Estado para almacenar los productos de la API
+  // 1. Estado para almacenar los productos de la API (utilizado en la portada HomeView)
   const [products, setProducts] = useState([]);
 
   // 2. Estados para el ciclo de vida de la petición asíncrona
@@ -50,7 +56,7 @@ function App() {
     }
   }, [cart]);
 
-  // Manejador centralizado para consultar productos (utilizado en montaje y reintento)
+  // Manejador centralizado para consultar productos (utilizado en montaje, reintento y sincronización CRUD)
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -62,7 +68,7 @@ function App() {
       console.error('Error al obtener productos desde la API:', err);
       setError(
         `No se pudo conectar con el servidor backend en ${API_BASE}. ` +
-        'Asegúrate de que la API de Express esté corriendo con "npm start" dentro de /backend.'
+          'Asegúrate de que la API de Express esté corriendo con "npm start" dentro de /backend.'
       );
     } finally {
       setLoading(false);
@@ -75,22 +81,59 @@ function App() {
     fetchProducts();
   }, [fetchProducts]);
 
+  // Sincronización reactiva cuando se crea, edita o elimina un producto (Integrante 5 CRUD)
+  const handleProductMutated = useCallback(
+    (action, payload) => {
+      fetchProducts();
+
+      // Si se eliminó o editó un producto que estaba en el carrito, mantener el carrito consistente
+      if (action === 'delete' && payload) {
+        setCart((prevCart) =>
+          prevCart.filter((item) => getProductoId(item) !== payload)
+        );
+      } else if (action === 'update' && payload) {
+        const updatedId = getProductoId(payload);
+        setCart((prevCart) =>
+          prevCart.map((item) =>
+            getProductoId(item) === updatedId
+              ? { ...item, ...payload, id: updatedId }
+              : item
+          )
+        );
+      }
+    },
+    [fetchProducts]
+  );
+
   // 5. Cálculo de cantidad total de artículos para pasar al Navbar vía props
   const cartCount = cart.reduce((total, item) => total + item.cantidad, 0);
 
-  // 6. Funciones inmutables para manipulación del estado del carrito
+  // 6. Funciones inmutables para manipulación del estado del carrito (compatibles con _id nativo de MongoDB)
   const handleAddToCart = (product, quantityToAdd = 1) => {
+    const prodId = getProductoId(product);
     setCart((prevCart) => {
-      const existingIndex = prevCart.findIndex((item) => item.id === product.id);
+      const existingIndex = prevCart.findIndex(
+        (item) => getProductoId(item) === prodId
+      );
 
       if (existingIndex > -1) {
         const updated = [...prevCart];
         const currentItem = updated[existingIndex];
-        const newQty = Math.min(product.stock || 99, currentItem.cantidad + quantityToAdd);
+        const newQty = Math.min(
+          product.stock || 99,
+          currentItem.cantidad + quantityToAdd
+        );
         updated[existingIndex] = { ...currentItem, cantidad: newQty };
         return updated;
       } else {
-        return [...prevCart, { ...product, cantidad: Math.min(product.stock || 99, quantityToAdd) }];
+        return [
+          ...prevCart,
+          {
+            ...product,
+            id: prodId,
+            cantidad: Math.min(product.stock || 99, quantityToAdd),
+          },
+        ];
       }
     });
   };
@@ -99,9 +142,14 @@ function App() {
     setCart((prevCart) => {
       return prevCart
         .map((item) => {
-          if (item.id === productId) {
+          if (getProductoId(item) === productId) {
             const nuevaCantidad = item.cantidad + delta;
-            return nuevaCantidad > 0 ? { ...item, cantidad: Math.min(item.stock || 99, nuevaCantidad) } : null;
+            return nuevaCantidad > 0
+              ? {
+                  ...item,
+                  cantidad: Math.min(item.stock || 99, nuevaCantidad),
+                }
+              : null;
           }
           return item;
         })
@@ -110,7 +158,9 @@ function App() {
   };
 
   const handleRemoveFromCart = (productId) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
+    setCart((prevCart) =>
+      prevCart.filter((item) => getProductoId(item) !== productId)
+    );
   };
 
   const handleClearCart = () => {
@@ -125,10 +175,7 @@ function App() {
       <ScrollToTop />
 
       {/* Barra de Navegación con contador de carrito vía props */}
-      <Navbar
-        cartCount={cartCount}
-        onOpenCart={() => setIsCartOpen(true)}
-      />
+      <Navbar cartCount={cartCount} onOpenCart={() => setIsCartOpen(true)} />
 
       {/* Contenido Principal con Rutas Globales Persistentes */}
       <main className={`main-content ${isHome ? 'main-content-home' : ''}`}>
@@ -163,7 +210,11 @@ function App() {
                   </div>
                   <h2>Error de Conexión</h2>
                   <p className="error-detail">{error}</p>
-                  <button type="button" className="btn btn-primary" onClick={fetchProducts}>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={fetchProducts}
+                  >
                     Reintentar conexión
                   </button>
                 </div>
@@ -173,13 +224,35 @@ function App() {
             }
           />
           {/* Catálogo general: consume GET /api/productos */}
-          <Route path="/productos" element={<ProductList onAddToCart={handleAddToCart} />} />
+          <Route
+            path="/productos"
+            element={<ProductList onAddToCart={handleAddToCart} />}
+          />
+          {/* Alta de nuevo producto (Integrante 5 — Panel de Administración y Formularios CRUD) */}
+          <Route
+            path="/admin/crear-producto"
+            element={
+              <ProductForm
+                onProductCreated={(created) =>
+                  handleProductMutated('create', created)
+                }
+              />
+            }
+          />
           {/* Rutas legadas redirigidas a las nuevas */}
           <Route path="/catalogo" element={<Navigate to="/productos" replace />} />
           <Route path="/producto/:id" element={<LegacyProductRedirect />} />
           <Route path="/contacto" element={<ContactView />} />
-          {/* Detalle dinámico: useParams + GET /api/productos/:id */}
-          <Route path="/productos/:id" element={<ProductDetail onAddToCart={handleAddToCart} />} />
+          {/* Detalle dinámico: useParams + GET / PUT / DELETE /api/productos/:id */}
+          <Route
+            path="/productos/:id"
+            element={
+              <ProductDetail
+                onAddToCart={handleAddToCart}
+                onProductMutated={handleProductMutated}
+              />
+            }
+          />
           <Route
             path="*"
             element={

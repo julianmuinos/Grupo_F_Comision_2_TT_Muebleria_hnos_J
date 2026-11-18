@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getProductoId } from '../api/productos';
 import useProducts from '../hooks/useProducts';
 import ProductCard from './ProductCard';
@@ -8,16 +9,19 @@ import ProductCard from './ProductCard';
  * Catálogo interactivo de Hermanos Jota con diseño oficial:
  * - Header superior con título, buscador integrado y chips de filtros rápidos
  * - Barra lateral izquierda con filtros de Categorías, Materiales con muestras de color
- * - Barra de herramientas con contador de piezas, selector de ordenamiento y alternador de vista (Grid / List)
- * - Custom Hook useProducts: estados reactivos de products, loading y error
+ * - Barra de herramientas con contador de piezas, botón de Alta de Producto (/admin/crear-producto),
+ *   selector de ordenamiento y alternador de vista (Grid / List)
+ * - Custom Hook useProducts: estados reactivos de products, loading, error y refetch
  * - Grilla visual de skeletons durante loading === true
  * - Mensaje amigable cuando error !== null
  * - Grilla de productos dinámica renderizada con .map() pasando product como prop a ProductCard
  * - Paginación interactiva
  */
 const ProductList = ({ onSelectProduct, onAddToCart }) => {
+  const navigate = useNavigate();
+
   // Consumo centralizado del custom hook useProducts
-  const { products, loading, error } = useProducts();
+  const { products, loading, error, refetch } = useProducts();
 
   const [searchInput, setSearchInput] = useState('');
   const [activeSearch, setActiveSearch] = useState('');
@@ -250,22 +254,34 @@ const ProductList = ({ onSelectProduct, onAddToCart }) => {
         {/* BARRA LATERAL (FILTROS) */}
         <aside className="catalog-sidebar" aria-label="Filtros del catálogo">
           <div className="sidebar-filter-header">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <line x1="4" y1="6" x2="20" y2="6" />
-              <line x1="6" y1="12" x2="18" y2="12" />
-              <line x1="8" y1="18" x2="16" y2="18" />
-            </svg>
-            <span>FILTRAR</span>
+            <div className="sidebar-filter-header-title">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="4" y1="6" x2="20" y2="6" />
+                <line x1="6" y1="12" x2="18" y2="12" />
+                <line x1="8" y1="18" x2="16" y2="18" />
+              </svg>
+              <span>FILTRAR</span>
+            </div>
+            {(selectedCategories.size > 0 || selectedMaterials.size > 0 || activeTag) && (
+              <button
+                type="button"
+                className="btn-sidebar-clear"
+                onClick={resetAllFilters}
+                title="Limpiar todos los filtros"
+              >
+                Limpiar
+              </button>
+            )}
           </div>
 
           {/* Filtro: Categorías */}
@@ -335,6 +351,15 @@ const ProductList = ({ onSelectProduct, onAddToCart }) => {
             </div>
 
             <div className="toolbar-controls-right">
+              {/* Botón de acceso directo al Alta de Producto (/admin/crear-producto) */}
+              <button
+                type="button"
+                className="btn btn-primary btn-sm btn-toolbar-create"
+                onClick={() => navigate('/admin/crear-producto')}
+              >
+                + Nuevo Producto
+              </button>
+
               {/* Dropdown de ordenamiento */}
               <div className="sort-control-wrapper">
                 <label htmlFor="sortSelect" className="sort-label">
@@ -427,7 +452,7 @@ const ProductList = ({ onSelectProduct, onAddToCart }) => {
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => window.location.reload()}
+                onClick={refetch}
               >
                 Reintentar
               </button>

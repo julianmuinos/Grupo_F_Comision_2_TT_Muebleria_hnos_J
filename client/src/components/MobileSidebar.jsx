@@ -6,13 +6,13 @@ import { createPortal } from 'react-dom';
  * Barra lateral de navegación deslizable (Drawer) para dispositivos móviles.
  * Replica fielmente el diseño del manual de marca de Hermanos Jota:
  * - Cabecera con isotipo oficial, marca en Playfair Display y botón de cierre
- * - Ítems con iconos: INICIO, CATÁLOGO (con estado activo), CONTACTO y COTIZACIÓN (con contador)
+ * - Ítems con iconos: INICIO, CATÁLOGO (con estado activo), CONTACTO, + CREAR PRODUCTO y COTIZACIÓN (con contador)
  * - Pie con información del Showroom oficial
- * 
+ *
  * Props:
  * - isOpen: booleano que determina si la barra está abierta
  * - onClose: función para cerrar la barra
- * - currentView: vista actual activa ('inicio' | 'catalogo' | 'contacto' | 'detalle')
+ * - currentView: vista actual activa ('inicio' | 'catalogo' | 'contacto' | 'admin' | 'detalle')
  * - onNavigate: callback para cambiar de vista
  * - onOpenCart: callback para abrir el carrito / cotización
  * - cartCount: cantidad total de artículos en el carrito
@@ -48,6 +48,7 @@ const MobileSidebar = ({
     if (view === 'inicio') onNavigate?.('/');
     else if (view === 'catalogo') onNavigate?.('/productos');
     else if (view === 'contacto') onNavigate?.('/contacto');
+    else if (view === 'admin') onNavigate?.('/admin/crear-producto');
     else onNavigate?.(view);
     onClose();
   };
@@ -65,6 +66,9 @@ const MobileSidebar = ({
     currentView === 'detalle' ||
     (typeof currentView === 'string' && currentView.startsWith('/producto'));
   const isContactActive = currentView === 'contacto' || currentView === '/contacto';
+  const isAdminActive =
+    currentView === 'admin' ||
+    (typeof currentView === 'string' && currentView.startsWith('/admin'));
 
   if (typeof document === 'undefined') return null;
 
@@ -193,6 +197,30 @@ const MobileSidebar = ({
               <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
             </svg>
             <span className="mobile-nav-text">CONTACTO</span>
+          </button>
+
+          <button
+            type="button"
+            className={`mobile-nav-item ${isAdminActive ? 'active' : ''}`}
+            onClick={() => handleLinkClick('admin')}
+          >
+            <svg
+              className="mobile-nav-icon"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="16" />
+              <line x1="8" y1="12" x2="16" y2="12" />
+            </svg>
+            <span className="mobile-nav-text">CREAR PRODUCTO</span>
           </button>
 
           <button

@@ -1,7 +1,7 @@
 # E-commerce Mueblería Hermanos Jota 🪵
 ## Trabajo Práctico Integrador — Sprints 3, 4, 5 y 6 | ITBA (Comisión 2 TT · Grupo F)
 
-Repositorio oficial del equipo para el desarrollo de la plataforma e-commerce y cotizador interactivo de **Mueblería Hermanos Jota**, basada en una arquitectura Cliente-Servidor desacoplada con **Node.js + Express** y **MongoDB Atlas (Mongoose)** en el backend, y **React 19 + Vite + Axios** en el frontend.
+Repositorio oficial del equipo para el desarrollo de la plataforma e-commerce y cotizador interactivo de **Mueblería Hermanos Jota**, basada en una arquitectura Cliente-Servidor desacoplada con **Node.js + Express** y **MongoDB Atlas (Mongoose)** en el backend, y **React 19 + Vite + Axios** en el frontend, lista para despliegue en la nube en **Render** y **Vercel**.
 
 ---
 
@@ -35,10 +35,11 @@ La solución adopta una **arquitectura desacoplada en capas (Client-Server con B
 
 ```text
 ┌────────────────────────────────────────────────────────┐
-│                   CLIENTE (Frontend)                   │
+│             CLIENTE (Frontend en Vercel)               │
 │      React 19 + Vite + Tailwind CSS + Axios            │
-│      Puerto por defecto: http://localhost:5173         │
+│      Despliegue: https://<tu-app>.vercel.app           │
 ├────────────────────────────────────────────────────────┤
+│  • Enrutamiento SPA con soporte vercel.json (rewrites) │
 │  • Custom Hook useProducts con AbortController         │
 │  • Instancia centralizada Axios apiClient (api.js)     │
 │  • Grilla con Skeleton Loading Shimmer durante carga   │
@@ -49,13 +50,13 @@ La solución adopta una **arquitectura desacoplada en capas (Client-Server con B
                     JSON Payloads (CORS dinámico por CLIENT_URL)
                             │
 ┌───────────────────────────▼────────────────────────────┐
-│                   SERVIDOR (Backend API)               │
+│             SERVIDOR (Backend API en Render)           │
 │          Node.js + Express 4 + Dotenv (API REST)       │
-│          Puerto por defecto: http://localhost:5000     │
+│          Despliegue: https://<tu-api>.onrender.com     │
 ├────────────────────────────────────────────────────────┤
-│  • Controladores desacoplados (Patrón MVC)             │
+│  • Controladores desacoplados (CRUD completo - MVC)    │
 │  • Router /api/productos y alias /api/products         │
-│  • Middleware de Auditoría/Logger y Error Handler      │
+│  • Middlewares: Auditoría, Validaciones y Errores      │
 │  • Conexión modular asíncrona a base de datos          │
 └───────────────────────────┬────────────────────────────┘
                             │
@@ -66,23 +67,24 @@ La solución adopta una **arquitectura desacoplada en capas (Client-Server con B
 │          MongoDB Atlas (Cluster M0 / AWS)              │
 │          Base de Datos: muebleria_hermanos_jota        │
 ├────────────────────────────────────────────────────────┤
-│  • Colección: productos (11 piezas oficiales)          │
+│  • Colecciones: productos (11) y categorias (4)        │
 │  • Clave primaria nativa: _id (ObjectId)               │
 │  • Índices optimizados por categoría y destacados      │
 └────────────────────────────────────────────────────────┘
 ```
 
 ### Características del Backend
+* **Modelado Relacional Mongoose (ref y populate)**: Modelo Categoria (models/Categoria.js) relacionado con Producto (models/Producto.js) a través de categoriaRef (ef: \'Categoria\'), con población automática en lecturas y retrocompatibilidad total con el cliente.
 * **Conexión a MongoDB Atlas con Mongoose**: Módulo desacoplado en `config/db.js` con manejo de excepciones `try/catch`, validación estricta de `MONGO_URI` y consola decorada con host y base de datos.
 * **Gestión de Entorno con Dotenv**: Centralización de variables críticas (`PORT`, `MONGO_URI`, `CLIENT_URL`) mediante `.env`, con plantillas seguras `.env.example` versionadas en el repositorio.
 * **CORS Dinámico**: Configurado para restringir accesos exclusivamente al origen `CLIENT_URL` (o permitir todos en desarrollo si no está definido).
-* **Controladores Asíncronos (MVC)**: Migración de datos estáticos en memoria a consultas reales contra MongoDB Atlas (`Producto.find()`, `Producto.findById()`).
-* **Validación de Identificadores**: Verificación de formato `ObjectId` de Mongoose en `GET /api/productos/:id` retornando `400 Bad Request` ante identificadores malformados y `404 Not Found` ante recursos inexistentes.
+* **Controladores Asíncronos con CRUD Completo (MVC)**: Implementación de operaciones de consulta (`obtenerProductos`, `obtenerProductoPorId`) y mutaciones (`crearProducto`, `actualizarProducto`, `eliminarProducto`) contra MongoDB Atlas.
+* **Capa de Validaciones Robustas (`middlewares/validaciones.js`)**: Middlewares dedicados para validar campos obligatorios y coherencia numérica en creación (`validarCrearProducto`), actualización parcial (`validarActualizarProducto`) y validación estricta de formato `ObjectId` (`validarIdMongo`), retornando `400 Bad Request` ante entradas inválidas.
 * **Soporte de Endpoints Bilingües**: Montaje simultáneo en `/api/productos` y en `/api/products` para interoperabilidad con clientes en inglés o español.
 * **Script de Sembrado Masivo (Seed)**: Script ejecutable `seed.js` idempotente que vacía la colección previa y carga los 11 muebles del catálogo oficial en Atlas con `npm run seed`.
 
 ### Características del Frontend
-* **Single Page Application (SPA)**: Desarrollada con React 19 y Vite para una navegación fluida e instantánea.
+* **Single Page Application (SPA)**: Desarrollada con React 19 y Vite para una navegación fluida e instantánea, con configuración de reescritura en `client/vercel.json` para soportar navegación directa y recargas de página sin errores 404 en producción.
 * **Cliente HTTP con Axios (`apiClient`)**: Instancia centralizada en `src/services/api.js` configurada con `baseURL` dinámica desde `VITE_API_URL`, `timeout: 10000ms` y headers JSON por defecto.
 * **Custom Hook `useProducts`**: Encapsula en `src/hooks/useProducts.js` la lógica asíncrona de obtención del catálogo, retornando `{ products, loading, error }` y protegiendo el ciclo de vida con `AbortController`.
 * **Grilla Skeleton de Carga (Shimmer)**: Mientras `loading === true`, `ProductList.jsx` renderiza 6 tarjetas *skeleton* con animación de pulso que simulan la estructura de imagen, título, precio y materiales.
@@ -102,16 +104,17 @@ Grupo_F_Comision_2_TT_Sprint_3-4_Muebleria_hnos_J/
 │   ├── config/
 │   │   └── db.js                 # Conexión a MongoDB Atlas mediante Mongoose
 │   ├── controllers/
-│   │   └── productos.controller.js # Controladores de lectura (find / findById)
+│   │   └── productos.controller.js # Controladores CRUD (lecturas y mutaciones)
 │   ├── data/
 │   │   └── productos.js          # Catálogo original de referencia y datos del seed
 │   ├── middlewares/
 │   │   ├── errorHandler.js       # Manejador 404 y middleware centralizado de errores
-│   │   └── logger.js             # Middleware global de auditoría con timestamp
+│   │   ├── logger.js             # Middleware global de auditoría con timestamp
+│   │   └── validaciones.js       # Validaciones de body y formato ObjectId
 │   ├── models/
 │   │   └── Producto.js           # Esquema y modelo Mongoose con _id nativo
 │   ├── routes/
-│   │   └── productos.routes.js   # Router con endpoints GET / y GET /:id
+│   │   └── productos.routes.js   # Rutas GET, POST, PUT y DELETE (/api/productos y /api/products)
 │   ├── index.js                  # Servidor Express con CORS, dotenv y rutas
 │   ├── seed.js                   # Script de sembrado masivo e idempotente
 │   ├── .env.example              # Plantilla de variables de entorno para backend
@@ -146,6 +149,7 @@ Grupo_F_Comision_2_TT_Sprint_3-4_Muebleria_hnos_J/
 │   │   ├── index.css             # Reseteo base y configuración de Tailwind CSS
 │   │   └── main.jsx              # Renderizado principal de la aplicación React 19
 │   ├── index.html                # Plantilla HTML5 con metadatos y fuentes
+│   ├── vercel.json               # Configuración de reescritura para rutas SPA en Vercel
 │   ├── .env.example              # Plantilla de variable VITE_API_URL
 │   ├── vite.config.js            # Configuración del bundler Vite
 │   ├── eslint.config.js          # Reglas de linting y buenas prácticas de código
@@ -166,6 +170,9 @@ Grupo_F_Comision_2_TT_Sprint_3-4_Muebleria_hnos_J/
 | `GET` | `/` | — | Comprobación de estado del servidor (*Health check*). | `200 OK` |
 | `GET` | `/api/productos`<br>`/api/products` | `?categoria=asientos`<br>`?destacados=true` | Obtiene el catálogo completo desde MongoDB Atlas (con soporte de filtros opcionales). | `200 OK`<br>`500 Error interno` |
 | `GET` | `/api/productos/:id`<br>`/api/products/:id` | `:id` (`ObjectId` hexadecimal de 24 caracteres) | Obtiene el detalle técnico y especificaciones de un mueble según su `_id` de MongoDB. | `200 OK`<br>`400 ID inválido`<br>`404 No encontrado`<br>`500 Error interno` |
+| `POST` | `/api/productos`<br>`/api/products` | Body JSON con campos del producto | Da de alta un nuevo producto en MongoDB con validación de campos obligatorios y normalización bilingüe. | `201 Created`<br>`400 Datos inválidos`<br>`500 Error interno` |
+| `PUT` | `/api/productos/:id`<br>`/api/products/:id` | `:id` (`ObjectId`), Body JSON | Modifica la información de un producto existente en la base de datos aplicando validaciones. | `200 OK`<br>`400 ID/Datos inválidos`<br>`404 No encontrado`<br>`500 Error interno` |
+| `DELETE` | `/api/productos/:id`<br>`/api/products/:id` | `:id` (`ObjectId` hexadecimal) | Elimina un producto de la colección en MongoDB Atlas por su identificador. | `200 OK`<br>`400 ID inválido`<br>`404 No encontrado`<br>`500 Error interno` |
 
 ### Formato de Respuestas de la API
 
@@ -210,13 +217,58 @@ Grupo_F_Comision_2_TT_Sprint_3-4_Muebleria_hnos_J/
   }
   ```
 
+* **Respuesta Exitosa (Alta de Producto - POST 201 Created)**:
+  ```json
+  {
+    "success": true,
+    "message": "Producto creado exitosamente en la base de datos.",
+    "data": {
+      "_id": "672412ef89a0b123456789ab",
+      "nombre": "Mesa de Centro Bariloche",
+      "categoria": "mesas",
+      "precio": 980000,
+      "descripcion": "Mesa baja en roble macizo con acabado ecológico.",
+      "imagen": "/assets/images/mesa-bariloche.png",
+      "stock": 4,
+      "inStock": true,
+      "destacado": false,
+      "createdAt": "2026-10-31T14:00:00.000Z",
+      "updatedAt": "2026-10-31T14:00:00.000Z"
+    }
+  }
+  ```
+
+* **Respuesta Exitosa (Baja de Producto - DELETE 200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Producto eliminado exitosamente de la base de datos.",
+    "data": {
+      "_id": "672412ef89a0b123456789ab",
+      "nombre": "Mesa de Centro Bariloche"
+    }
+  }
+  ```
+
 * **Respuestas de Error Estandarizadas**:
   * **400 Bad Request (ObjectId malformado)**:
     ```json
     {
       "success": false,
       "status": 400,
-      "message": "El parámetro \"id\" no tiene un formato de ObjectId válido."
+      "message": "El parámetro \"id\" ('id-invalido-123') no es un identificador válido de MongoDB (ObjectId)."
+    }
+    ```
+  * **400 Bad Request (Validación de campos obligatorios o coherencia)**:
+    ```json
+    {
+      "success": false,
+      "status": 400,
+      "message": "Errores de validación en la solicitud.",
+      "errores": [
+        "El nombre del producto es obligatorio.",
+        "El precio debe ser un número mayor o igual a 0."
+      ]
     }
     ```
   * **404 Not Found (Recurso no encontrado)**:
@@ -230,7 +282,7 @@ Grupo_F_Comision_2_TT_Sprint_3-4_Muebleria_hnos_J/
 
 ---
 
-## 🛠️ Instalación y Ejecución
+## 🛠️ Instalación y Ejecución Local
 
 ### Prerrequisitos
 * **Node.js**: v18.0.0 o superior (recomendado v20+)
@@ -303,15 +355,18 @@ npm run dev
 
 ## 🔍 Registro de Mejoras y Calidad de Código (Sprints 4, 5 y 6)
 
-1. **Unificación de Reglas Git y Prettier**: Se consolidaron los archivos `.gitignore` y `.prettierignore` en la raíz del repositorio, evitando inconsistencias entre `client` y `backend`.
+1. **Unificación y Optimización de `.gitignore` y `.prettierignore`**: Consolidación en la raíz con reglas `.env.*` exhaustivas, exclusión de cachés (`.eslintcache`) y cobertura de testing (`coverage/`).
 2. **Persistencia NoSQL en la Nube**: Migración exitosa de catálogo estático en memoria a base de datos distribuida en MongoDB Atlas mediante Mongoose 9.
 3. **Identificadores Nativos de MongoDB**: Adopción de `_id` (`ObjectId`) como clave primaria técnica única, resolviendo ambigüedades e inconsistencias de auto-incrementos manuales.
-4. **Resiliencia de Conexión de Servidor**: El servidor Express condiciona el inicio del listener HTTP a la confirmación previa del handshake con MongoDB Atlas.
-5. **CORS Orientado a Entorno**: Restricción automática de acceso al origen `CLIENT_URL` en producción y apertura controlada en desarrollo.
-6. **Capa de Servicios Desacoplada**: Implementación de la instancia `apiClient` con Axios en `src/services/api.js` con timeout de 10 segundos y headers estándar.
-7. **Custom Hook Reactivo (`useProducts`)**: Desacoplamiento de la lógica de red de los componentes de vista, implementando ciclo de vida seguro con `AbortController`.
-8. **Feedback Visual Inmediato (Skeleton Loader)**: Reemplazo de pantallas de bloqueo estáticas por esqueletos con efecto shimmer en la grilla del catálogo.
-9. **Eliminación de Datos Hardcodeados**: Adaptación de `ProductCard` para renderizar propiedades dinámicas reales provenientes de la base de datos.
+4. **CRUD Completo con Manejo de Estado HTTP**: Implementación de `POST /api/productos` (201 Created), `PUT /api/productos/:id` (200 OK) y `DELETE /api/productos/:id` (200 OK).
+5. **Capa Centralizada de Validaciones (`validaciones.js`)**: Verificación de presencia, tipos y coherencia de datos previa a la persistencia con respuestas `400 Bad Request`.
+6. **Resiliencia de Conexión de Servidor**: El servidor Express condiciona el inicio del listener HTTP a la confirmación previa del handshake con MongoDB Atlas.
+7. **CORS Orientado a Entorno**: Restricción automática de acceso al origen `CLIENT_URL` en producción y apertura controlada en desarrollo.
+8. **Capa de Servicios Desacoplada**: Implementación de la instancia `apiClient` con Axios en `src/services/api.js` con timeout de 10 segundos y headers estándar.
+9. **Custom Hook Reactivo (`useProducts`)**: Desacoplamiento de la lógica de red de los componentes de vista, implementando ciclo de vida seguro con `AbortController`.
+10. **Feedback Visual Inmediato (Skeleton Loader)**: Reemplazo de pantallas de bloqueo estáticas por esqueletos con efecto shimmer en la grilla del catálogo.
+11. **Eliminación de Datos Hardcodeados**: Adaptación de `ProductCard` para renderizar propiedades dinámicas reales provenientes de la base de datos.
+12. **Configuración de Despliegue en la Nube (Vercel & Render)**: Incorporación de `client/vercel.json` con reglas de reescritura SPA y documentación del flujo de producción.
 
 ---
 
