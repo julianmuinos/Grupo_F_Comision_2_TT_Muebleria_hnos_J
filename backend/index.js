@@ -36,11 +36,13 @@ app.get('/', (req, res) => {
 // Rutas de la API (soporta endpoint oficial y alias en inglés)
 const productosRouter = require('./routes/productos.routes');
 const categoriasRouter = require('./routes/categorias.routes');
+const authRouter = require('./routes/auth.routes');
 
 app.use('/api/productos', productosRouter);
 app.use('/api/products', productosRouter);
 app.use('/api/categorias', categoriasRouter);
 app.use('/api/categories', categoriasRouter);
+app.use('/api/auth', authRouter);
 
 // Middleware para manejo de rutas no encontradas (404)
 app.use(notFoundHandler);
