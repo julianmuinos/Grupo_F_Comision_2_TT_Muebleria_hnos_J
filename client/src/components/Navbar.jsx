@@ -13,20 +13,14 @@ import { useCart } from '../context/CartContext';
  *   enlaces a /perfil y /mis-pedidos, y botón Cerrar Sesión (logout)
  */
 const Navbar = ({
-  cartCount: propCartCount,
   currentView: propCurrentView,
   onNavigate,
-  onOpenCart: propOnOpenCart,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
-  const cartContext = useCart();
-
-  const resolvedCartCount =
-    propCartCount !== undefined ? propCartCount : cartContext?.cartCount ?? 0;
-  const resolvedOpenCart = propOnOpenCart || cartContext?.openCart;
+  const { totalItems, openCart } = useCart();
 
   const handleNavigate = (path) => {
     if (onNavigate) {
@@ -216,9 +210,9 @@ const Navbar = ({
           <button
             type="button"
             className="cart-button"
-            onClick={resolvedOpenCart}
-            aria-label="Ver carrito de cotización"
-            title="Ver carrito de cotización"
+            onClick={openCart}
+            aria-label="Ver carrito de compras"
+            title="Ver carrito de compras"
           >
             <svg
               width="18"
@@ -236,7 +230,7 @@ const Navbar = ({
               <path d="M16 10a4 4 0 0 1-8 0" />
             </svg>
             <span className="cart-badge" id="cart-counter">
-              {resolvedCartCount}
+              {totalItems}
             </span>
           </button>
         </div>
@@ -248,8 +242,6 @@ const Navbar = ({
         onClose={() => setIsMobileMenuOpen(false)}
         currentView={activeView}
         onNavigate={handleNavigate}
-        onOpenCart={resolvedOpenCart}
-        cartCount={resolvedCartCount}
       />
     </header>
   );

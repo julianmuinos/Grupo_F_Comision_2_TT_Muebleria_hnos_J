@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProductoId } from '../api/productos';
+import { useCart } from '../context/CartContext';
 
 /**
  * Componente ProductCard
@@ -11,10 +12,22 @@ import { getProductoId } from '../api/productos';
  * - Botón de favorito interactivo (corazón ♡ / ♥)
  * - Muestras de color / swatches y stock real disponible
  * - Precio formateado en moneda argentina ($ ARS)
+ * - Conectado directamente a CartContext (addItem)
  */
-const ProductCard = ({ product, onSelectProduct, onAddToCart, viewMode = 'grid' }) => {
+const ProductCard = ({ product, onSelectProduct, viewMode = 'grid' }) => {
   const navigate = useNavigate();
+  const { addItem } = useCart();
   const [isFavorite, setIsFavorite] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
+  const addedTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (addedTimerRef.current) {
+        clearTimeout(addedTimerRef.current);
+      }
+    };
+  }, []);
 
   if (!product) return null;
 
@@ -62,9 +75,15 @@ const ProductCard = ({ product, onSelectProduct, onAddToCart, viewMode = 'grid' 
 
   const handleAddClick = (e) => {
     e.stopPropagation();
-    if (hayStock) {
-      onAddToCart?.(product, 1);
+    if (!hayStock) return;
+    addItem(product, 1);
+    setJustAdded(true);
+    if (addedTimerRef.current) {
+      clearTimeout(addedTimerRef.current);
     }
+    addedTimerRef.current = setTimeout(() => {
+      setJustAdded(false);
+    }, 1400);
   };
 
   const handleSelect = (e) => {
@@ -161,7 +180,7 @@ const ProductCard = ({ product, onSelectProduct, onAddToCart, viewMode = 'grid' 
                 onClick={handleAddClick}
                 disabled={!hayStock}
               >
-                {hayStock ? '+ Cotizar' : 'Agotado'}
+                {!hayStock ? 'Agotado' : justAdded ? '✓ Agregado' : '+ Agregar al carrito'}
               </button>
             </div>
           </div>
@@ -244,7 +263,7 @@ const ProductCard = ({ product, onSelectProduct, onAddToCart, viewMode = 'grid' 
           </div>
         </div>
 
-        {/* Botón flotante para cotización */}
+        {/* Botón flotante para agregar al carrito */}
         <div className="product-card-quick-actions">
           <button
             type="button"
@@ -252,7 +271,7 @@ const ProductCard = ({ product, onSelectProduct, onAddToCart, viewMode = 'grid' 
             onClick={handleAddClick}
             disabled={!hayStock}
           >
-            {hayStock ? '+ Añadir a Cotización' : 'Agotado'}
+            {!hayStock ? 'Agotado' : justAdded ? '✓ Agregado al carrito' : '+ Agregar al carrito'}
           </button>
         </div>
       </div>

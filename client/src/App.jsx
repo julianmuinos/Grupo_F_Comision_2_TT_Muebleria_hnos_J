@@ -32,14 +32,11 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const {
-    cart,
-    cartCount,
+    items,
     isCartOpen,
-    openCart,
     closeCart,
-    addToCart,
-    updateQuantity,
-    removeFromCart,
+    adjustQuantity,
+    removeItem,
     clearCart,
     syncCartWithProductMutation,
   } = useCart();
@@ -93,7 +90,7 @@ function AppContent() {
       <ScrollToTop />
 
       {/* Barra de Navegación con consumo de AuthContext y CartContext */}
-      <Navbar cartCount={cartCount} onOpenCart={openCart} />
+      <Navbar />
 
       {/* Contenido Principal con Rutas Globales Persistentes */}
       <main className={`main-content ${isHome ? 'main-content-home' : ''}`}>
@@ -144,7 +141,7 @@ function AppContent() {
           {/* Catálogo general: consume GET /api/productos */}
           <Route
             path="/productos"
-            element={<ProductList onAddToCart={addToCart} />}
+            element={<ProductList />}
           />
           {/* Pantallas Públicas de Autenticación (/login y /registro) */}
           <Route path="/login" element={<LoginView />} />
@@ -220,7 +217,6 @@ function AppContent() {
             path="/productos/:id"
             element={
               <ProductDetail
-                onAddToCart={addToCart}
                 onProductMutated={handleProductMutated}
               />
             }
@@ -254,9 +250,9 @@ function AppContent() {
       <CartModal
         isOpen={isCartOpen}
         onClose={closeCart}
-        cart={cart}
-        onUpdateQuantity={updateQuantity}
-        onRemoveItem={removeFromCart}
+        cart={items}
+        onUpdateQuantity={adjustQuantity}
+        onRemoveItem={removeItem}
         onClearCart={clearCart}
       />
     </div>

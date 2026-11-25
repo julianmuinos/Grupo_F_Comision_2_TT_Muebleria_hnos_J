@@ -6,6 +6,7 @@ import {
   deleteProducto,
   getProductoId,
 } from '../api/productos';
+import { useCart } from '../context/CartContext';
 
 /**
  * Componente ProductDetail
@@ -13,18 +14,18 @@ import {
  * - Botón de volver al catálogo y breadcrumbs
  * - Fotos grandes con badges de estado y categoría
  * - Especificaciones técnicas completas (medidas, materiales, acabados, etc.)
- * - Selector de cantidad y adición al carrito / cotización con feedback visual
+ * - Selector de cantidad y adición al carrito conectado a CartContext con feedback visual
  * - Acciones CRUD (Integrante 5): Botones y Modales integrados para Editar (PUT /api/productos/:id)
  *   y Eliminar (DELETE /api/productos/:id) con redirección programática vía useNavigate.
  *
  * Props:
  * - onBack: Función callback opcional para regresar al listado del catálogo
- * - onAddToCart: Función callback para añadir cantidad especificada al carrito
  * - onProductMutated: Función callback opcional para sincronizar cambios globales (edición/borrado)
  */
-const ProductDetail = ({ onBack: propOnBack, onAddToCart, onProductMutated }) => {
+const ProductDetail = ({ onBack: propOnBack, onProductMutated }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [showToast, setShowToast] = useState(false);
 
@@ -270,7 +271,7 @@ const ProductDetail = ({ onBack: propOnBack, onAddToCart, onProductMutated }) =>
   // Manejador para agregar al carrito y mostrar notificación temporal
   const handleAdd = () => {
     if (!hayStock) return;
-    onAddToCart?.(product, quantity);
+    addItem(product, quantity);
     setShowToast(true);
     setTimeout(() => {
       setShowToast(false);
