@@ -5,11 +5,12 @@ const {
   validarRegistro,
   validarLogin,
 } = require('../middlewares/authValidations');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 /**
  * Rutas de Autenticación - Mueblería Hermanos Jota
- * Endpoints públicos implementados por Alexis Fernando Rojas.
- * Nota para integración: GET /api/auth/profile será conectado usando `middlewares/authMiddleware`.
+ * POST /api/auth/register y POST /api/auth/login (Alexis Fernando Rojas)
+ * GET /api/auth/profile (Emanuel Ramirez - Endpoint protegido usando authMiddleware de Alexis)
  */
 
 /**
@@ -25,5 +26,12 @@ router.post('/register', validarRegistro, authController.register);
  * @access  Público
  */
 router.post('/login', validarLogin, authController.login);
+
+/**
+ * @route   GET /api/auth/profile
+ * @desc    Devolver la información del usuario autenticado (req.user)
+ * @access  Privado (requiere authMiddleware)
+ */
+router.get('/profile', authMiddleware, authController.getProfile);
 
 module.exports = router;

@@ -79,7 +79,25 @@ const login = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Devolver la información del usuario autenticado (req.user)
+ * @route   GET /api/auth/profile
+ * @access  Privado (requiere authMiddleware)
+ * @status  200 OK
+ */
+const getProfile = async (req, res, next) => {
+  try {
+    return res.status(200).json({
+      success: true,
+      data: req.user,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
+  getProfile,
 };
