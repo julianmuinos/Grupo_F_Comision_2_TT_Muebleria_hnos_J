@@ -23,8 +23,14 @@ lerna-debug.log*
 dist/
 dist-ssr/
 build/
+.vite/
+.cache/
 .eslintcache
+*.tsbuildinfo
 coverage/
+
+# Despliegue local con CLIs (Vercel)
+.vercel/
 
 # Configuraciones de editores e IDEs
 .vscode/*
