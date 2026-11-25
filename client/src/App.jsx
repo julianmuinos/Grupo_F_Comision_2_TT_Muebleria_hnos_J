@@ -31,15 +31,7 @@ function LegacyProductRedirect() {
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
-  const {
-    items,
-    isCartOpen,
-    closeCart,
-    adjustQuantity,
-    removeItem,
-    clearCart,
-    syncCartWithProductMutation,
-  } = useCart();
+  const { syncCartWithProductMutation } = useCart();
 
   // 1. Estado para almacenar los productos de la API (utilizado en la portada HomeView)
   const [products, setProducts] = useState([]);
@@ -247,14 +239,7 @@ function AppContent() {
       <Footer />
 
       {/* Modal / Drawer del Carrito */}
-      <CartModal
-        isOpen={isCartOpen}
-        onClose={closeCart}
-        cart={items}
-        onUpdateQuantity={adjustQuantity}
-        onRemoveItem={removeItem}
-        onClearCart={clearCart}
-      />
+      <CartModal />
     </div>
   );
 }

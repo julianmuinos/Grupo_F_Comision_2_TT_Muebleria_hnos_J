@@ -1,59 +1,156 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getProductoId } from '../api/productos';
+import { createOrder } from '../api/orders';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+
+const UMBRAL_ENVIO_GRATIS = 1500000; // $1.500.000 ARS
+
+const formatoMoneda = (valor) =>
+  new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    maximumFractionDigits: 0,
+  }).format(Number(valor) || 0);
 
 /**
  * Componente CartModal
- * Modal deslizable o ventana emergente que muestra los artículos en el carrito.
- * Props:
- * - isOpen: booleano que indica si el modal está visible
- * - onClose: función para cerrar el modal
- * - cart: array de productos con sus cantidades [{ ...producto, cantidad }]
- * - onUpdateQuantity: (id, delta) => void
- * - onRemoveItem: (id) => void
- * - onClearCart: () => void
+ * Drawer lateral del carrito conectado directamente a CartContext y AuthContext.
+ * Flujo "Finalizar Compra":
+ * - Sin sesión: bloquea el envío, muestra aviso y redirige a /login conservando el carrito.
+ * - Con sesión: envía POST /api/orders con Bearer JWT, limpia el carrito y redirige a /mis-pedidos.
  */
-const CartModal = ({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onClearCart }) => {
-  const [checkoutComplete, setCheckoutComplete] = useState(false);
+const CartModal = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const {
+    items,
+    totalItems,
+    totalPrice,
+    isCartOpen,
+    closeCart,
+    updateQuantity,
+    removeItem,
+    clearCart,
+  } = useCart();
+  const { isAuthenticated, token, logout } = useAuth();
 
-  if (!isOpen) return null;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkoutError, setCheckoutError] = useState(null);
+  const [authNotice, setAuthNotice] = useState(null);
+  const redirectTimerRef = useRef(null);
 
-  // Cálculo del subtotal y total con umbral realista de envío bonificado
-  const UMBRAL_ENVIO_GRATIS = 1500000; // $1.500.000 ARS
-  const subtotal = cart.reduce(
-    (acc, item) => acc + (item.precio ?? item.price ?? 0) * item.cantidad,
-    0
-  );
-  const envioGratis = subtotal >= UMBRAL_ENVIO_GRATIS;
-  const costoEnvio = subtotal > 0 && !envioGratis ? 8500 : 0;
-  const total = subtotal + costoEnvio;
-
-  const formatoMoneda = (valor) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      maximumFractionDigits: 0,
-    }).format(valor);
+  const resetTransientState = () => {
+    setCheckoutError(null);
+    setAuthNotice(null);
+    setIsSubmitting(false);
+    if (redirectTimerRef.current) {
+      clearTimeout(redirectTimerRef.current);
+      redirectTimerRef.current = null;
+    }
   };
 
-  const handleCheckout = () => {
-    setCheckoutComplete(true);
-    setTimeout(() => {
-      onClearCart();
-      setCheckoutComplete(false);
-      onClose();
-    }, 3000);
+  const handleCloseCart = () => {
+    if (isSubmitting) return;
+    resetTransientState();
+    closeCart();
+  };
+
+  // Limpiar timers pendientes si el modal se cierra o se desmonta
+  useEffect(() => {
+    if (!isCartOpen && redirectTimerRef.current) {
+      clearTimeout(redirectTimerRef.current);
+      redirectTimerRef.current = null;
+    }
+  }, [isCartOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, []);
+
+  if (!isCartOpen) return null;
+
+  const envioGratis = totalPrice >= UMBRAL_ENVIO_GRATIS;
+
+  const handleCheckout = async () => {
+    if (isSubmitting || authNotice) return;
+    setCheckoutError(null);
+
+    // 1. Si el usuario no está logueado: impedir POST, mostrar aviso y redirigir a /login
+    if (!isAuthenticated) {
+      const noticeMsg =
+        'Necesitás iniciar sesión para finalizar tu compra. Guardamos tu carrito para que no pierdas ningún mueble.';
+      setAuthNotice(noticeMsg);
+
+      redirectTimerRef.current = setTimeout(() => {
+        resetTransientState();
+        closeCart();
+        navigate('/login', {
+          state: {
+            from: location,
+            authNotice: noticeMsg,
+          },
+        });
+      }, 1100);
+      return;
+    }
+
+    // 2. Usuario autenticado: enviar POST /api/orders con token Bearer
+    setIsSubmitting(true);
+    try {
+      const createdOrder = await createOrder(items, {}, token);
+      clearCart();
+      resetTransientState();
+      closeCart();
+      navigate('/mis-pedidos', {
+        state: { orderCreated: createdOrder },
+      });
+    } catch (err) {
+      if (err.status === 401) {
+        logout();
+        resetTransientState();
+        closeCart();
+        navigate('/login', {
+          state: {
+            from: location,
+            authNotice:
+              'Tu sesión expiró. Iniciá sesión nuevamente para finalizar tu compra (tu carrito sigue guardado).',
+          },
+        });
+        return;
+      }
+
+      setCheckoutError(
+        err.message ||
+          'No se pudo confirmar tu pedido. Verificá tu conexión e intentá nuevamente.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleExploreCatalog = () => {
-    onClose();
+    resetTransientState();
+    closeCart();
     navigate('/productos');
   };
 
   return (
-    <div className="cart-backdrop" onClick={onClose}>
-      <aside className="cart-drawer" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="cart-backdrop"
+      onClick={handleCloseCart}
+      role="presentation"
+    >
+      <aside
+        className="cart-drawer"
+        onClick={(e) => e.stopPropagation()}
+        aria-label="Carrito de compras"
+      >
         <div className="cart-header">
           <div className="cart-title-row">
             <svg
@@ -71,36 +168,20 @@ const CartModal = ({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onCl
               <path d="M3 6h18" />
               <path d="M16 10a4 4 0 0 1-8 0" />
             </svg>
-            <h2>Tu Carrito de Compras</h2>
+            <h2>Tu Carrito ({totalItems})</h2>
           </div>
-          <button type="button" className="close-btn" onClick={onClose} aria-label="Cerrar carrito">
+          <button
+            type="button"
+            className="close-btn"
+            onClick={handleCloseCart}
+            disabled={isSubmitting}
+            aria-label="Cerrar carrito"
+          >
             ✕
           </button>
         </div>
 
-        {checkoutComplete ? (
-          <div className="checkout-success-view">
-            <svg
-              width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--verde-salvia)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <path d="m9 12 2 2 4-4" />
-            </svg>
-            <h3>¡Pedido confirmado con éxito!</h3>
-            <p>
-              Gracias por confiar en <strong>Mueblería Hermanos Jota</strong>. Te hemos enviado un correo con el detalle de entrega y factura.
-            </p>
-            <p className="redirect-note">Cerrando el carrito...</p>
-          </div>
-        ) : cart.length === 0 ? (
+        {items.length === 0 ? (
           <div className="cart-empty-view">
             <svg
               width="48"
@@ -125,12 +206,13 @@ const CartModal = ({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onCl
         ) : (
           <>
             <div className="cart-items-list custom-scroll">
-              {cart.map((item) => {
+              {items.map((item) => {
                 const itemId = getProductoId(item);
                 const itemNombre = item.nombre || item.title || item.name;
                 const itemImagen =
                   item.imagenUrl || item.imagen || item.image || item.foto;
-                const itemPrecio = item.precio ?? item.price ?? 0;
+                const itemPrecio = Number(item.precio ?? item.price ?? 0);
+                const maxStock = Number(item.stock) > 0 ? Number(item.stock) : 99;
 
                 return (
                   <div key={itemId} className="cart-item">
@@ -141,26 +223,30 @@ const CartModal = ({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onCl
                       <div className="cart-item-controls">
                         <button
                           type="button"
-                          onClick={() => onUpdateQuantity(itemId, -1)}
+                          onClick={() => updateQuantity(itemId, item.cantidad - 1)}
                           className="qty-btn-mini"
+                          disabled={isSubmitting}
                           title="Restar uno"
+                          aria-label={`Disminuir cantidad de ${itemNombre}`}
                         >
                           -
                         </button>
                         <span className="cart-item-qty">{item.cantidad}</span>
                         <button
                           type="button"
-                          onClick={() => onUpdateQuantity(itemId, 1)}
+                          onClick={() => updateQuantity(itemId, item.cantidad + 1)}
                           className="qty-btn-mini"
-                          disabled={item.cantidad >= item.stock}
+                          disabled={isSubmitting || item.cantidad >= maxStock}
                           title="Sumar uno"
+                          aria-label={`Aumentar cantidad de ${itemNombre}`}
                         >
                           +
                         </button>
                         <button
                           type="button"
-                          onClick={() => onRemoveItem(itemId)}
+                          onClick={() => removeItem(itemId)}
                           className="remove-btn"
+                          disabled={isSubmitting}
                           title="Eliminar producto"
                           aria-label={`Eliminar ${itemNombre}`}
                         >
@@ -192,36 +278,65 @@ const CartModal = ({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onCl
 
             <div className="cart-footer">
               <div className="cart-summary-line">
-                <span>Subtotal:</span>
-                <span>{formatoMoneda(subtotal)}</span>
+                <span>Subtotal ({totalItems} {totalItems === 1 ? 'unidad' : 'unidades'}):</span>
+                <span>{formatoMoneda(totalPrice)}</span>
               </div>
               <div className="cart-summary-line">
                 <span>Envío:</span>
-                <span>{envioGratis ? '¡Gratis!' : formatoMoneda(costoEnvio)}</span>
+                <span>{envioGratis ? '¡Bonificado!' : 'A coordinar'}</span>
               </div>
               {!envioGratis && (
                 <p className="free-shipping-hint">
-                  Agrega {formatoMoneda(UMBRAL_ENVIO_GRATIS - subtotal)} más para obtener{' '}
-                  <strong>Envío Gratis</strong>
+                  Agregá {formatoMoneda(UMBRAL_ENVIO_GRATIS - totalPrice)} más para obtener{' '}
+                  <strong>Envío Bonificado</strong>
                 </p>
               )}
               <div className="cart-summary-line total-line">
                 <strong>Total a Pagar:</strong>
-                <strong className="total-amount">{formatoMoneda(total)}</strong>
+                <strong className="total-amount">{formatoMoneda(totalPrice)}</strong>
               </div>
+
+              {!isAuthenticated && !authNotice && (
+                <p className="cart-auth-hint" role="note">
+                  Vas a necesitar iniciar sesión para confirmar tu pedido. Tu carrito se conserva guardado.
+                </p>
+              )}
+
+              {authNotice && (
+                <div className="cart-notice-alert" role="status">
+                  {authNotice} Redirigiendo al login...
+                </div>
+              )}
+
+              {checkoutError && (
+                <div className="admin-alert-error cart-checkout-alert" role="alert">
+                  {checkoutError}
+                </div>
+              )}
 
               <div className="cart-actions-group">
                 <button
                   type="button"
                   className="btn btn-primary btn-checkout"
                   onClick={handleCheckout}
+                  disabled={isSubmitting || Boolean(authNotice)}
                 >
-                  Confirmar Compra
+                  {isSubmitting ? (
+                    <>
+                      <span className="btn-inline-spinner" aria-hidden="true" />
+                      Procesando pedido...
+                    </>
+                  ) : authNotice ? (
+                    'Redirigiendo a Login...'
+                  ) : (
+                    'Finalizar Compra'
+                  )}
                 </button>
                 <button
                   type="button"
                   className="btn btn-text btn-clear"
-                  onClick={onClearCart}
+                  onClick={clearCart}
+                  disabled={isSubmitting}
                 >
                   Vaciar carrito
                 </button>

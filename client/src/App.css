@@ -1593,6 +1593,33 @@ html {
   border-radius: 3px;
 }
 
+.cart-auth-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: var(--alabastro-suave, #fff2e2);
+  border: 1px solid var(--siena-tostado-border, rgba(130, 59, 24, 0.25));
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm, 8px);
+  line-height: 1.4;
+}
+
+.cart-notice-alert {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--primary, #823b18);
+  background: var(--primary-light, #fbece5);
+  border: 1px solid var(--siena-tostado-border, rgba(130, 59, 24, 0.3));
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm, 8px);
+  line-height: 1.45;
+}
+
+.cart-checkout-alert {
+  margin-bottom: 0;
+  font-size: 0.84rem;
+  padding: 0.65rem 0.85rem;
+}
+
 .cart-actions-group {
   display: flex;
   flex-direction: column;

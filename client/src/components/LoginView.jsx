@@ -17,7 +17,10 @@ const LoginView = () => {
   const { login, isAuthenticated } = useAuth();
 
   // Destino post-login: ruta protegida de origen o Inicio ('/')
-  const redirectPath = location.state?.from?.pathname || '/';
+  const redirectPath = location.state?.from
+    ? `${location.state.from.pathname || '/'}${location.state.from.search || ''}`
+    : '/';
+  const authNotice = location.state?.authNotice;
 
   const [formData, setFormData] = useState({
     email: '',
@@ -125,9 +128,15 @@ const LoginView = () => {
           </p>
         </div>
 
-        {location.state?.from && (
+        {(authNotice || location.state?.from) && (
           <div className="auth-info-banner" role="status">
-            Iniciá sesión para acceder a <strong>{location.state.from.pathname}</strong>.
+            {authNotice ? (
+              authNotice
+            ) : (
+              <>
+                Iniciá sesión para acceder a <strong>{location.state.from.pathname}</strong>.
+              </>
+            )}
           </div>
         )}
 
