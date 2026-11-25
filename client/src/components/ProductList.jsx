@@ -17,7 +17,7 @@ import ProductCard from './ProductCard';
  * - Grilla de productos dinámica renderizada con .map() pasando product como prop a ProductCard
  * - Paginación interactiva
  */
-const ProductList = ({ onSelectProduct, onAddToCart }) => {
+const ProductList = ({ onSelectProduct }) => {
   const navigate = useNavigate();
 
   // Consumo centralizado del custom hook useProducts
@@ -465,7 +465,6 @@ const ProductList = ({ onSelectProduct, onAddToCart }) => {
                   key={getProductoId(product)}
                   product={product}
                   onSelectProduct={onSelectProduct}
-                  onAddToCart={onAddToCart}
                   viewMode={viewMode}
                 />
               ))}

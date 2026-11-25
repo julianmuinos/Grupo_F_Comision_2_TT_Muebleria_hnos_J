@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 /**
  * Componente MobileSidebar
  * Barra lateral de navegación deslizable (Drawer) para dispositivos móviles.
- * Integra navegación dinámica (UI condicional) consumiendo AuthContext:
+ * Integra navegación dinámica (UI condicional) consumiendo AuthContext y CartContext:
  * - Sin sesión: muestra accesos a LOGIN (/login) y REGISTRO (/registro)
  * - Con sesión: muestra tarjeta de saludo al usuario, MI PERFIL (/perfil),
  *   MIS PEDIDOS (/mis-pedidos), CREAR PRODUCTO (/admin/crear-producto) y CERRAR SESIÓN
@@ -15,10 +16,9 @@ const MobileSidebar = ({
   onClose,
   currentView,
   onNavigate,
-  onOpenCart,
-  cartCount = 0,
 }) => {
   const { user, isAuthenticated, logout } = useAuth();
+  const { totalItems, openCart } = useCart();
 
   // Cerrar al presionar la tecla Escape y bloquear scroll del fondo cuando está abierto
   useEffect(() => {
@@ -53,7 +53,7 @@ const MobileSidebar = ({
   };
 
   const handleCartClick = () => {
-    onOpenCart?.();
+    openCart();
     onClose();
   };
 
@@ -238,8 +238,8 @@ const MobileSidebar = ({
               <path d="M3 6h18" />
               <path d="M16 10a4 4 0 0 1-8 0" />
             </svg>
-            <span className="mobile-nav-text">COTIZACIÓN</span>
-            <span className="mobile-nav-badge">{cartCount}</span>
+            <span className="mobile-nav-text">CARRITO</span>
+            <span className="mobile-nav-badge">{totalItems}</span>
           </button>
 
           <div className="mobile-nav-divider" />

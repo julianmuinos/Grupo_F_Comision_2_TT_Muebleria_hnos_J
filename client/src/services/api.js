@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+export const TOKEN_STORAGE_KEY = 'hnosj_token';
+
 /**
  * Instancia centralizada de Axios para comunicación con la API del Backend
  * - baseURL: apunta a VITE_API_URL (por defecto http://localhost:5000/api)
@@ -13,5 +15,25 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+/**
+ * Interceptor de peticiones: inyecta automáticamente Authorization: Bearer <token>
+ * desde localStorage si existe sesión activa (evita fallos al recargar rutas protegidas).
+ */
+apiClient.interceptors.request.use(
+  (config) => {
+    try {
+      const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+      if (token && !config.headers?.Authorization) {
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch {
+      // Ignorar errores de acceso a localStorage
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 export default apiClient;

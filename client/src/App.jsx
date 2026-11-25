@@ -10,6 +10,7 @@ import ContactView from './components/ContactView';
 import LoginView from './components/LoginView';
 import RegisterView from './components/RegisterView';
 import ProfileView from './components/ProfileView';
+import MyOrdersView from './components/MyOrdersView';
 import ProtectedRoute from './components/ProtectedRoute';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
@@ -31,18 +32,7 @@ function LegacyProductRedirect() {
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
-  const {
-    cart,
-    cartCount,
-    isCartOpen,
-    openCart,
-    closeCart,
-    addToCart,
-    updateQuantity,
-    removeFromCart,
-    clearCart,
-    syncCartWithProductMutation,
-  } = useCart();
+  const { syncCartWithProductMutation } = useCart();
 
   // 1. Estado para almacenar los productos de la API (utilizado en la portada HomeView)
   const [products, setProducts] = useState([]);
@@ -93,7 +83,7 @@ function AppContent() {
       <ScrollToTop />
 
       {/* Barra de Navegación con consumo de AuthContext y CartContext */}
-      <Navbar cartCount={cartCount} onOpenCart={openCart} />
+      <Navbar />
 
       {/* Contenido Principal con Rutas Globales Persistentes */}
       <main className={`main-content ${isHome ? 'main-content-home' : ''}`}>
@@ -144,7 +134,7 @@ function AppContent() {
           {/* Catálogo general: consume GET /api/productos */}
           <Route
             path="/productos"
-            element={<ProductList onAddToCart={addToCart} />}
+            element={<ProductList />}
           />
           {/* Pantallas Públicas de Autenticación (/login y /registro) */}
           <Route path="/login" element={<LoginView />} />
@@ -165,37 +155,7 @@ function AppContent() {
             path="/mis-pedidos"
             element={
               <ProtectedRoute>
-                <div className="state-container">
-                  <span className="section-badge">Mi Cuenta · Hermanos Jota</span>
-                  <h2 style={{ marginTop: '0.5rem' }}>Mis Pedidos</h2>
-                  <p className="section-subtitle">
-                    Todavía no registrás pedidos confirmados con tu cuenta.
-                  </p>
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: '0.85rem',
-                      justifyContent: 'center',
-                      flexWrap: 'wrap',
-                      marginTop: '1.5rem',
-                    }}
-                  >
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => navigate('/productos')}
-                    >
-                      Explorar Catálogo
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => navigate('/perfil')}
-                    >
-                      Volver a Mi Perfil
-                    </button>
-                  </div>
-                </div>
+                <MyOrdersView />
               </ProtectedRoute>
             }
           />
@@ -220,7 +180,6 @@ function AppContent() {
             path="/productos/:id"
             element={
               <ProductDetail
-                onAddToCart={addToCart}
                 onProductMutated={handleProductMutated}
               />
             }
@@ -251,14 +210,7 @@ function AppContent() {
       <Footer />
 
       {/* Modal / Drawer del Carrito */}
-      <CartModal
-        isOpen={isCartOpen}
-        onClose={closeCart}
-        cart={cart}
-        onUpdateQuantity={updateQuantity}
-        onRemoveItem={removeFromCart}
-        onClearCart={clearCart}
-      />
+      <CartModal />
     </div>
   );
 }
