@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ordersController = require('../controllers/orders.controller');
-const authMiddleware = require('../middlewares/auth.middleware');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 /**
  * Rutas de Pedidos (Orders) - Integrante 2 (Emanuel Ramirez)
