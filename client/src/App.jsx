@@ -10,6 +10,7 @@ import ContactView from './components/ContactView';
 import LoginView from './components/LoginView';
 import RegisterView from './components/RegisterView';
 import ProfileView from './components/ProfileView';
+import MyOrdersView from './components/MyOrdersView';
 import ProtectedRoute from './components/ProtectedRoute';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
@@ -154,37 +155,7 @@ function AppContent() {
             path="/mis-pedidos"
             element={
               <ProtectedRoute>
-                <div className="state-container">
-                  <span className="section-badge">Mi Cuenta · Hermanos Jota</span>
-                  <h2 style={{ marginTop: '0.5rem' }}>Mis Pedidos</h2>
-                  <p className="section-subtitle">
-                    Todavía no registrás pedidos confirmados con tu cuenta.
-                  </p>
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: '0.85rem',
-                      justifyContent: 'center',
-                      flexWrap: 'wrap',
-                      marginTop: '1.5rem',
-                    }}
-                  >
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => navigate('/productos')}
-                    >
-                      Explorar Catálogo
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => navigate('/perfil')}
-                    >
-                      Volver a Mi Perfil
-                    </button>
-                  </div>
-                </div>
+                <MyOrdersView />
               </ProtectedRoute>
             }
           />
