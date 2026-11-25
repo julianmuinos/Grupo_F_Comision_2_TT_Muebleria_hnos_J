@@ -7,11 +7,16 @@ import ProductDetail from './components/ProductDetail';
 import ProductForm from './components/ProductForm';
 import HomeView from './components/HomeView';
 import ContactView from './components/ContactView';
+import LoginView from './components/LoginView';
+import RegisterView from './components/RegisterView';
+import ProfileView from './components/ProfileView';
+import ProtectedRoute from './components/ProtectedRoute';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
+import { AuthProvider } from './context/AuthContext';
+import { CartProvider, useCart } from './context/CartContext';
 import {
   getProductos,
-  getProductoId,
   API_BASE,
   PRODUCTOS_URL as API_URL,
 } from './api/productos';
@@ -23,9 +28,21 @@ function LegacyProductRedirect() {
   return <Navigate to={`/productos/${id}`} replace />;
 }
 
-function App() {
+function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
+  const {
+    cart,
+    cartCount,
+    isCartOpen,
+    openCart,
+    closeCart,
+    addToCart,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    syncCartWithProductMutation,
+  } = useCart();
 
   // 1. Estado para almacenar los productos de la API (utilizado en la portada HomeView)
   const [products, setProducts] = useState([]);
@@ -33,28 +50,6 @@ function App() {
   // 2. Estados para el ciclo de vida de la petición asíncrona
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // 3. Estado global del Carrito de Compras en App.jsx con persistencia en localStorage
-  const [cart, setCart] = useState(() => {
-    try {
-      const saved = localStorage.getItem('hnosj_cart');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // Estado para visibilidad del modal del carrito
-  const [isCartOpen, setIsCartOpen] = useState(false);
-
-  // Persistir en localStorage ante cualquier modificación del carrito
-  useEffect(() => {
-    try {
-      localStorage.setItem('hnosj_cart', JSON.stringify(cart));
-    } catch (e) {
-      console.error('Error al guardar el carrito:', e);
-    }
-  }, [cart]);
 
   // Manejador centralizado para consultar productos (utilizado en montaje, reintento y sincronización CRUD)
   const fetchProducts = useCallback(async () => {
@@ -85,87 +80,10 @@ function App() {
   const handleProductMutated = useCallback(
     (action, payload) => {
       fetchProducts();
-
-      // Si se eliminó o editó un producto que estaba en el carrito, mantener el carrito consistente
-      if (action === 'delete' && payload) {
-        setCart((prevCart) =>
-          prevCart.filter((item) => getProductoId(item) !== payload)
-        );
-      } else if (action === 'update' && payload) {
-        const updatedId = getProductoId(payload);
-        setCart((prevCart) =>
-          prevCart.map((item) =>
-            getProductoId(item) === updatedId
-              ? { ...item, ...payload, id: updatedId }
-              : item
-          )
-        );
-      }
+      syncCartWithProductMutation(action, payload);
     },
-    [fetchProducts]
+    [fetchProducts, syncCartWithProductMutation]
   );
-
-  // 5. Cálculo de cantidad total de artículos para pasar al Navbar vía props
-  const cartCount = cart.reduce((total, item) => total + item.cantidad, 0);
-
-  // 6. Funciones inmutables para manipulación del estado del carrito (compatibles con _id nativo de MongoDB)
-  const handleAddToCart = (product, quantityToAdd = 1) => {
-    const prodId = getProductoId(product);
-    setCart((prevCart) => {
-      const existingIndex = prevCart.findIndex(
-        (item) => getProductoId(item) === prodId
-      );
-
-      if (existingIndex > -1) {
-        const updated = [...prevCart];
-        const currentItem = updated[existingIndex];
-        const newQty = Math.min(
-          product.stock || 99,
-          currentItem.cantidad + quantityToAdd
-        );
-        updated[existingIndex] = { ...currentItem, cantidad: newQty };
-        return updated;
-      } else {
-        return [
-          ...prevCart,
-          {
-            ...product,
-            id: prodId,
-            cantidad: Math.min(product.stock || 99, quantityToAdd),
-          },
-        ];
-      }
-    });
-  };
-
-  const handleUpdateQuantity = (productId, delta) => {
-    setCart((prevCart) => {
-      return prevCart
-        .map((item) => {
-          if (getProductoId(item) === productId) {
-            const nuevaCantidad = item.cantidad + delta;
-            return nuevaCantidad > 0
-              ? {
-                  ...item,
-                  cantidad: Math.min(item.stock || 99, nuevaCantidad),
-                }
-              : null;
-          }
-          return item;
-        })
-        .filter(Boolean);
-    });
-  };
-
-  const handleRemoveFromCart = (productId) => {
-    setCart((prevCart) =>
-      prevCart.filter((item) => getProductoId(item) !== productId)
-    );
-  };
-
-  const handleClearCart = () => {
-    setCart([]);
-  };
 
   const isHome = location.pathname === '/';
 
@@ -174,8 +92,8 @@ function App() {
       {/* Reset de scroll inmediato al cambiar de ruta */}
       <ScrollToTop />
 
-      {/* Barra de Navegación con contador de carrito vía props */}
-      <Navbar cartCount={cartCount} onOpenCart={() => setIsCartOpen(true)} />
+      {/* Barra de Navegación con consumo de AuthContext y CartContext */}
+      <Navbar cartCount={cartCount} onOpenCart={openCart} />
 
       {/* Contenido Principal con Rutas Globales Persistentes */}
       <main className={`main-content ${isHome ? 'main-content-home' : ''}`}>
@@ -226,8 +144,62 @@ function App() {
           {/* Catálogo general: consume GET /api/productos */}
           <Route
             path="/productos"
-            element={<ProductList onAddToCart={handleAddToCart} />}
+            element={<ProductList onAddToCart={addToCart} />}
           />
+          {/* Pantallas Públicas de Autenticación (/login y /registro) */}
+          <Route path="/login" element={<LoginView />} />
+          <Route path="/registro" element={<RegisterView />} />
+
+          {/* Página Protegida de Perfil (/perfil) */}
+          <Route
+            path="/perfil"
+            element={
+              <ProtectedRoute>
+                <ProfileView />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Ruta Protegida de Mis Pedidos (/mis-pedidos) */}
+          <Route
+            path="/mis-pedidos"
+            element={
+              <ProtectedRoute>
+                <div className="state-container">
+                  <span className="section-badge">Mi Cuenta · Hermanos Jota</span>
+                  <h2 style={{ marginTop: '0.5rem' }}>Mis Pedidos</h2>
+                  <p className="section-subtitle">
+                    Todavía no registrás pedidos confirmados con tu cuenta.
+                  </p>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '0.85rem',
+                      justifyContent: 'center',
+                      flexWrap: 'wrap',
+                      marginTop: '1.5rem',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => navigate('/productos')}
+                    >
+                      Explorar Catálogo
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => navigate('/perfil')}
+                    >
+                      Volver a Mi Perfil
+                    </button>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            }
+          />
+
           {/* Alta de nuevo producto (Integrante 5 — Panel de Administración y Formularios CRUD) */}
           <Route
             path="/admin/crear-producto"
@@ -248,7 +220,7 @@ function App() {
             path="/productos/:id"
             element={
               <ProductDetail
-                onAddToCart={handleAddToCart}
+                onAddToCart={addToCart}
                 onProductMutated={handleProductMutated}
               />
             }
@@ -281,13 +253,23 @@ function App() {
       {/* Modal / Drawer del Carrito */}
       <CartModal
         isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
+        onClose={closeCart}
         cart={cart}
-        onUpdateQuantity={handleUpdateQuantity}
-        onRemoveItem={handleRemoveFromCart}
-        onClearCart={handleClearCart}
+        onUpdateQuantity={updateQuantity}
+        onRemoveItem={removeFromCart}
+        onClearCart={clearCart}
       />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <CartProvider>
+        <AppContent />
+      </CartProvider>
+    </AuthProvider>
   );
 }
 

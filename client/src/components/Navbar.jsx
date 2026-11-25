@@ -1,20 +1,32 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import MobileSidebar from './MobileSidebar';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 /**
  * Componente Navbar
- * Basado en la identidad oficial de Hermanos Jota (Sprint 1 & 2)
- * Props:
- * - cartCount: cantidad total de artículos en el carrito
- * - currentView: vista actual opcional
- * - onNavigate: función opcional para cambiar de vista
- * - onOpenCart: función para abrir el modal del carrito
+ * Basado en la identidad oficial de Hermanos Jota con Navegación Dinámica (UI Condicional):
+ * - Consume AuthContext (isAuthenticated, user, logout) y CartContext (cartCount, openCart)
+ * - Sin sesión: muestra accesos a Login (/login) y Registro (/registro), ocultando + Crear Producto
+ * - Con sesión: oculta Login/Registro, muestra + Crear Producto, saludo al usuario,
+ *   enlaces a /perfil y /mis-pedidos, y botón Cerrar Sesión (logout)
  */
-const Navbar = ({ cartCount, currentView: propCurrentView, onNavigate, onOpenCart }) => {
+const Navbar = ({
+  cartCount: propCartCount,
+  currentView: propCurrentView,
+  onNavigate,
+  onOpenCart: propOnOpenCart,
+}) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
+  const cartContext = useCart();
+
+  const resolvedCartCount =
+    propCartCount !== undefined ? propCartCount : cartContext?.cartCount ?? 0;
+  const resolvedOpenCart = propOnOpenCart || cartContext?.openCart;
 
   const handleNavigate = (path) => {
     if (onNavigate) {
@@ -24,12 +36,23 @@ const Navbar = ({ cartCount, currentView: propCurrentView, onNavigate, onOpenCar
     }
   };
 
-  // Determinar vista activa según la ruta actual ('Catálogo' activo también en /productos/:id)
+  const handleLogout = () => {
+    logout();
+    handleNavigate('/');
+  };
+
+  const firstName = user?.nombre ? user.nombre.trim().split(/\s+/)[0] : 'Cliente';
+
+  // Determinar vista activa según la ruta actual
   const isHome = location.pathname === '/';
   const isCatalog =
     location.pathname === '/catalogo' || location.pathname.startsWith('/producto');
   const isContact = location.pathname === '/contacto';
   const isAdmin = location.pathname.startsWith('/admin');
+  const isProfile = location.pathname === '/perfil';
+  const isOrders = location.pathname === '/mis-pedidos';
+  const isLogin = location.pathname === '/login';
+  const isRegister = location.pathname === '/registro';
 
   const activeView =
     propCurrentView ||
@@ -41,6 +64,14 @@ const Navbar = ({ cartCount, currentView: propCurrentView, onNavigate, onOpenCar
       ? 'contacto'
       : isAdmin
       ? 'admin'
+      : isProfile
+      ? 'perfil'
+      : isOrders
+      ? 'mis-pedidos'
+      : isLogin
+      ? 'login'
+      : isRegister
+      ? 'registro'
       : '');
 
   return (
@@ -89,8 +120,8 @@ const Navbar = ({ cartCount, currentView: propCurrentView, onNavigate, onOpenCar
           </div>
         </button>
 
-        {/* Enlaces de Navegación (Desktop) */}
-        <nav className="nav-links">
+        {/* Enlaces de Navegación Principal (Desktop) */}
+        <nav className="nav-links" aria-label="Navegación principal">
           <button
             type="button"
             className={`nav-button ${isHome ? 'active' : ''}`}
@@ -112,21 +143,80 @@ const Navbar = ({ cartCount, currentView: propCurrentView, onNavigate, onOpenCar
           >
             Contacto
           </button>
-          <button
-            type="button"
-            className={`nav-button ${isAdmin ? 'active' : ''}`}
-            onClick={() => handleNavigate('/admin/crear-producto')}
-          >
-            + Crear Producto
-          </button>
+
+          {/* Opciones visibles únicamente con sesión activa */}
+          {isAuthenticated && (
+            <>
+              <button
+                type="button"
+                className={`nav-button ${isOrders ? 'active' : ''}`}
+                onClick={() => handleNavigate('/mis-pedidos')}
+              >
+                Mis Pedidos
+              </button>
+              <button
+                type="button"
+                className={`nav-button ${isProfile ? 'active' : ''}`}
+                onClick={() => handleNavigate('/perfil')}
+              >
+                Mi Perfil
+              </button>
+              <button
+                type="button"
+                className={`nav-button ${isAdmin ? 'active' : ''}`}
+                onClick={() => handleNavigate('/admin/crear-producto')}
+              >
+                + Crear Producto
+              </button>
+            </>
+          )}
         </nav>
 
-        {/* Botón de Carrito con Contador vía Props */}
+        {/* Acciones Derecha: UI Condicional de Autenticación + Carrito */}
         <div className="nav-actions">
+          {!isAuthenticated ? (
+            <div className="nav-auth-group">
+              <button
+                type="button"
+                className={`nav-button nav-login-btn ${isLogin ? 'active' : ''}`}
+                onClick={() => handleNavigate('/login')}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                className={`nav-register-btn ${isRegister ? 'active' : ''}`}
+                onClick={() => handleNavigate('/registro')}
+              >
+                Registro
+              </button>
+            </div>
+          ) : (
+            <div className="nav-auth-group nav-auth-logged">
+              <button
+                type="button"
+                className={`nav-user-greeting ${isProfile ? 'active' : ''}`}
+                onClick={() => handleNavigate('/perfil')}
+                title="Ver mi perfil"
+              >
+                <span className="nav-user-dot" aria-hidden="true" />
+                Hola, <strong>{firstName}</strong>
+              </button>
+              <button
+                type="button"
+                className="nav-logout-btn"
+                onClick={handleLogout}
+                title="Cerrar sesión"
+              >
+                Salir
+              </button>
+            </div>
+          )}
+
           <button
             type="button"
             className="cart-button"
-            onClick={onOpenCart}
+            onClick={resolvedOpenCart}
             aria-label="Ver carrito de cotización"
             title="Ver carrito de cotización"
           >
@@ -146,7 +236,7 @@ const Navbar = ({ cartCount, currentView: propCurrentView, onNavigate, onOpenCar
               <path d="M16 10a4 4 0 0 1-8 0" />
             </svg>
             <span className="cart-badge" id="cart-counter">
-              {cartCount}
+              {resolvedCartCount}
             </span>
           </button>
         </div>
@@ -158,8 +248,8 @@ const Navbar = ({ cartCount, currentView: propCurrentView, onNavigate, onOpenCar
         onClose={() => setIsMobileMenuOpen(false)}
         currentView={activeView}
         onNavigate={handleNavigate}
-        onOpenCart={onOpenCart}
-        cartCount={cartCount}
+        onOpenCart={resolvedOpenCart}
+        cartCount={resolvedCartCount}
       />
     </header>
   );

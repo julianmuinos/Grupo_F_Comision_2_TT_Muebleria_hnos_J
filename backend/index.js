@@ -84,7 +84,7 @@ app.use('/api/products', productosRouter);
 app.use('/api/categorias', categoriasRouter);
 app.use('/api/categories', categoriasRouter);
 
-// Endpoints de Autenticación y Pedidos Protegidos (Sprint 6 - Emanuel Ramirez & Alexis)
+// Endpoints de Autenticación y Pedidos Protegidos (Sprint 6 - Emanuel Ramirez & Alexis Fernando Rojas)
 app.use('/api/auth', authRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/pedidos', ordersRouter); // Alias en español
@@ -101,9 +101,7 @@ if (require.main === module) {
   conectarDB()
     .then(() => {
       app.listen(PORT, () => {
-        console.log(
-          `🚀 Servidor activo en el puerto ${PORT} (http://localhost:${PORT})`
-        );
+        console.log(`🚀 Servidor activo en el puerto ${PORT} (http://localhost:${PORT})`);
       });
     })
     .catch((err) => {

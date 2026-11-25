@@ -1,21 +1,14 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Componente MobileSidebar
  * Barra lateral de navegación deslizable (Drawer) para dispositivos móviles.
- * Replica fielmente el diseño del manual de marca de Hermanos Jota:
- * - Cabecera con isotipo oficial, marca en Playfair Display y botón de cierre
- * - Ítems con iconos: INICIO, CATÁLOGO (con estado activo), CONTACTO, + CREAR PRODUCTO y COTIZACIÓN (con contador)
- * - Pie con información del Showroom oficial
- *
- * Props:
- * - isOpen: booleano que determina si la barra está abierta
- * - onClose: función para cerrar la barra
- * - currentView: vista actual activa ('inicio' | 'catalogo' | 'contacto' | 'admin' | 'detalle')
- * - onNavigate: callback para cambiar de vista
- * - onOpenCart: callback para abrir el carrito / cotización
- * - cartCount: cantidad total de artículos en el carrito
+ * Integra navegación dinámica (UI condicional) consumiendo AuthContext:
+ * - Sin sesión: muestra accesos a LOGIN (/login) y REGISTRO (/registro)
+ * - Con sesión: muestra tarjeta de saludo al usuario, MI PERFIL (/perfil),
+ *   MIS PEDIDOS (/mis-pedidos), CREAR PRODUCTO (/admin/crear-producto) y CERRAR SESIÓN
  */
 const MobileSidebar = ({
   isOpen,
@@ -25,6 +18,8 @@ const MobileSidebar = ({
   onOpenCart,
   cartCount = 0,
 }) => {
+  const { user, isAuthenticated, logout } = useAuth();
+
   // Cerrar al presionar la tecla Escape y bloquear scroll del fondo cuando está abierto
   useEffect(() => {
     if (isOpen) {
@@ -49,12 +44,22 @@ const MobileSidebar = ({
     else if (view === 'catalogo') onNavigate?.('/productos');
     else if (view === 'contacto') onNavigate?.('/contacto');
     else if (view === 'admin') onNavigate?.('/admin/crear-producto');
+    else if (view === 'perfil') onNavigate?.('/perfil');
+    else if (view === 'mis-pedidos') onNavigate?.('/mis-pedidos');
+    else if (view === 'login') onNavigate?.('/login');
+    else if (view === 'registro') onNavigate?.('/registro');
     else onNavigate?.(view);
     onClose();
   };
 
   const handleCartClick = () => {
-    onOpenCart();
+    onOpenCart?.();
+    onClose();
+  };
+
+  const handleLogoutClick = () => {
+    logout();
+    onNavigate?.('/');
     onClose();
   };
 
@@ -69,6 +74,11 @@ const MobileSidebar = ({
   const isAdminActive =
     currentView === 'admin' ||
     (typeof currentView === 'string' && currentView.startsWith('/admin'));
+  const isProfileActive = currentView === 'perfil' || currentView === '/perfil';
+  const isOrdersActive =
+    currentView === 'mis-pedidos' || currentView === '/mis-pedidos';
+  const isLoginActive = currentView === 'login' || currentView === '/login';
+  const isRegisterActive = currentView === 'registro' || currentView === '/registro';
 
   if (typeof document === 'undefined') return null;
 
@@ -125,6 +135,14 @@ const MobileSidebar = ({
             </svg>
           </button>
         </div>
+
+        {/* Bloque de Saludo al Usuario Autenticado */}
+        {isAuthenticated && user && (
+          <div className="mobile-drawer-user-card">
+            <span className="mobile-user-greeting">Hola, {user.nombre}</span>
+            <span className="mobile-user-email">{user.email}</span>
+          </div>
+        )}
 
         {/* Lista de Navegación */}
         <nav className="mobile-drawer-nav">
@@ -201,30 +219,6 @@ const MobileSidebar = ({
 
           <button
             type="button"
-            className={`mobile-nav-item ${isAdminActive ? 'active' : ''}`}
-            onClick={() => handleLinkClick('admin')}
-          >
-            <svg
-              className="mobile-nav-icon"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="16" />
-              <line x1="8" y1="12" x2="16" y2="12" />
-            </svg>
-            <span className="mobile-nav-text">CREAR PRODUCTO</span>
-          </button>
-
-          <button
-            type="button"
             className="mobile-nav-item mobile-nav-item-cart"
             onClick={handleCartClick}
           >
@@ -247,6 +241,159 @@ const MobileSidebar = ({
             <span className="mobile-nav-text">COTIZACIÓN</span>
             <span className="mobile-nav-badge">{cartCount}</span>
           </button>
+
+          <div className="mobile-nav-divider" />
+
+          {/* UI Condicional en Mobile */}
+          {!isAuthenticated ? (
+            <>
+              <button
+                type="button"
+                className={`mobile-nav-item ${isLoginActive ? 'active' : ''}`}
+                onClick={() => handleLinkClick('login')}
+              >
+                <svg
+                  className="mobile-nav-icon"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                  <polyline points="10 17 15 12 10 7" />
+                  <line x1="15" x2="3" y1="12" y2="12" />
+                </svg>
+                <span className="mobile-nav-text">LOGIN</span>
+              </button>
+
+              <button
+                type="button"
+                className={`mobile-nav-item ${isRegisterActive ? 'active' : ''}`}
+                onClick={() => handleLinkClick('registro')}
+              >
+                <svg
+                  className="mobile-nav-icon"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <line x1="19" x2="19" y1="8" y2="14" />
+                  <line x1="22" x2="16" y1="11" y2="11" />
+                </svg>
+                <span className="mobile-nav-text">REGISTRO</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={`mobile-nav-item ${isProfileActive ? 'active' : ''}`}
+                onClick={() => handleLinkClick('perfil')}
+              >
+                <svg
+                  className="mobile-nav-icon"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                <span className="mobile-nav-text">MI PERFIL</span>
+              </button>
+
+              <button
+                type="button"
+                className={`mobile-nav-item ${isOrdersActive ? 'active' : ''}`}
+                onClick={() => handleLinkClick('mis-pedidos')}
+              >
+                <svg
+                  className="mobile-nav-icon"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                  <path d="m3.3 7 8.7 5 8.7-5" />
+                  <path d="M12 22V12" />
+                </svg>
+                <span className="mobile-nav-text">MIS PEDIDOS</span>
+              </button>
+
+              <button
+                type="button"
+                className={`mobile-nav-item ${isAdminActive ? 'active' : ''}`}
+                onClick={() => handleLinkClick('admin')}
+              >
+                <svg
+                  className="mobile-nav-icon"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="16" />
+                  <line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
+                <span className="mobile-nav-text">CREAR PRODUCTO</span>
+              </button>
+
+              <button
+                type="button"
+                className="mobile-nav-item mobile-nav-item-logout"
+                onClick={handleLogoutClick}
+              >
+                <svg
+                  className="mobile-nav-icon"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" x2="9" y1="12" y2="12" />
+                </svg>
+                <span className="mobile-nav-text">CERRAR SESIÓN</span>
+              </button>
+            </>
+          )}
         </nav>
 
         {/* Pie del Drawer con Información de Showroom */}

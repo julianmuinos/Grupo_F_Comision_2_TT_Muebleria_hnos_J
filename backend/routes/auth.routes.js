@@ -1,17 +1,37 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
-const authMiddleware = require('../middlewares/auth.middleware');
+const {
+  validarRegistro,
+  validarLogin,
+} = require('../middlewares/authValidations');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 /**
  * Rutas de Autenticación - Mueblería Hermanos Jota
+ * POST /api/auth/register y POST /api/auth/login (Alexis Fernando Rojas)
+ * GET /api/auth/profile (Emanuel Ramirez - Endpoint protegido usando authMiddleware de Alexis)
  */
 
-// Rutas públicas
-router.post('/register', authController.register);
-router.post('/login', authController.login);
+/**
+ * @route   POST /api/auth/register
+ * @desc    Registro de nuevo usuario con hash bcrypt y emisión de JWT
+ * @access  Público
+ */
+router.post('/register', validarRegistro, authController.register);
 
-// Rutas protegidas (Endpoint solicitado: GET /api/auth/profile)
+/**
+ * @route   POST /api/auth/login
+ * @desc    Login de usuario y emisión de JWT
+ * @access  Público
+ */
+router.post('/login', validarLogin, authController.login);
+
+/**
+ * @route   GET /api/auth/profile
+ * @desc    Devolver la información del usuario autenticado (req.user)
+ * @access  Privado (requiere authMiddleware)
+ */
 router.get('/profile', authMiddleware, authController.getProfile);
 
 module.exports = router;
